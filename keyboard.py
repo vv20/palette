@@ -1,17 +1,17 @@
 import numpy as np
 import jack
 
-playingKeys = []
 toBePlayed = []
+toBeStopped = []
 
-def init(samplerate):
+def init():
     pass
 
 def process(nFrames, port):
     pass
 
-def playKey():
-    pass
+def playKey(midi_key):
+    toBePlayed.append(midi_key)
 
-def releaseKey():
-    pass
+def releaseKey(midi_key):
+    toBeStopped.append(midi_key)

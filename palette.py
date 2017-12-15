@@ -1,20 +1,79 @@
 import usb.core as usb
 import usb.util as util
+import keyboard
+import sampler
 
 KEYBOARD_MODE = 1
-DRUMPAD_MODE = 2
-SAMPLER_MODE = 3
-EFFECTS_MODE = 4
-LOOPER_MODE = 5
+SAMPLER_MODE = 2
 mode = KEYBOARD_MODE
 
 pressed_keys = []
 
+keyboard_mappings = {
+        # C-z
+        29: 36,
+        # C#-s
+        22: 37,
+        # D-x
+        28: 38,
+        # D#-d
+        7: 39,
+        # E-c
+        6: 40,
+        # F-v
+        25: 41,
+        # F#-g
+        10: 42,
+        # G-b
+        5: 43,
+        # G#-h
+        11: 44,
+        # A-n
+        17: 45,
+        # A#-j
+        13: 46,
+        # B-m
+        16: 47
+        # C-,
+        54: 48,
+        # C#-l
+        15: 49,
+        # D-.
+        55: 50,
+        # D#-;
+        51: 51,
+        # E-/
+        56: 52
+}
+
+# main pad
+pad = range(4, 40)
+pad.append(54)
+pad.append(55)
+pad.append(56)
+pad.append(51)
+
+def get_midi_key(int_key):
+    pass
+
+def get_track_no(int_key):
+    pass
+
 def key_released(key):
     print("key " + str(key) + " released")
+    if key in pad:
+        if mode == KEYBOARD_MODE:
+            keyboard.stopKey(get_key_from_int(key))
+        else:
+            sampler.stopTrack(get_track_no(key))
 
 def key_pressed(key):
     print("key " + str(key) + " pressed")
+    if key in pad:
+        if mode == KEYBOARD_MODE:
+            keyboard.playKey(get_key_from_int(key))
+        else:
+            sampler.playTrack(get_track_no(key))
 
 keyboard = usb.find(bDeviceClass=0)
 firstInt = keyboard[0][(0,0)].bInterfaceNumber
