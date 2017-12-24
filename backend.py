@@ -16,13 +16,13 @@ def shutdown():
     client.close()
 
 def process(frames):
-    keyboard.process(frames, keyboard_midi)
-    sampler.process(frames, sampler_out.get_array())
+    keyboard.process()
+    sampler.process(frames)
     looper.process(frames, looper_in.get_array(), looper_out.get_array())
 
 def init():
     # register client
-    client = jack.Client("palette")
+    client = jack.Client("palette", no_start_server=True)
     
     # register in-port
     looper_in = client.inports.register("looper_in")
@@ -35,8 +35,8 @@ def init():
     sampler_midi = client.midi_outports.register("sampler_out")
 
     # initialise the instruments
-    keyboard.init()
-    sampler.init()
+    keyboard.init(keyboard_midi)
+    sampler.init(sampler_midi)
     looper.init(client.samplerate)
 
     # set callbacks
