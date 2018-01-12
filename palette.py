@@ -7,7 +7,7 @@ keyboard_mappings = {
         # C#-s
         22: 37,
         # D-x
-        28: 38,
+        27: 38,
         # D#-d
         7: 39,
         # E-c
