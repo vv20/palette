@@ -1,4 +1,4 @@
-import usb.core as usb
+from usb import core as usb
 import usb.util as util
 
 # set up the usb magic
@@ -19,6 +19,7 @@ fifo = open("palette.pipe", mode="w")
 
 attempts = 10
 data = None
+pressed_keys = []
 while attempts > 0:
     try:
         data = keyboard.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize)
@@ -28,14 +29,14 @@ while attempts > 0:
         for key in pressed_keys:
             if key not in data:
                 pressed_keys.remove(key)
-                print("-" + key, end="", file=fifo, flush=True)
+                print("-" + str(key), file=fifo, flush=True)
         # trigger the pressed keys
         for i in range(2, len(data)):
             if data[i] == 0:
                 continue
             if data[i] not in pressed_keys:
                 pressed_keys.append(data[i])
-                print("+" + key, end="", file=fifo, flush=True)
+                print("+" + str(data[i]), file=fifo, flush=True)
     except usb.USBError as e:
         data = None
         if e.args == ("Operation timed out",):

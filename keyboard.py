@@ -1,23 +1,33 @@
 import numpy as np
 import jack
+from threading import Lock
 
-toBePlayed = []
-toBeStopped = []
+class Keyboard:
+    def __init__(self, port):
+        print("init keyboard...")
+        self.midi_port = port 
+        self.toBePlayed = []
+        self.toBeStopped = []
+        self.lock = Lock()
 
-midi_port = None
+    def process(self):
+        self.lock.acquire()
+        for key in self.toBePlayed:
+            self.midi_port.write_midi_event(0, (144, key, 1))
+        for key in self.toBeStopped:
+            self.midi_port.write_midi_event(0, (128, key, 1))
+        self.toBePlayed = []
+        self.toBeStopped = []
+        self.lock.release()
 
-def init(port):
-    midi_port = port
+    def playKey(self, midi_key):
+        print("playing key " + str(midi_key) + "...")
+        self.lock.acquire()
+        self.toBePlayed.append(midi_key)
+        self.lock.release()
 
-def process():
-    for key in toBePlayed:
-        port.write_midi_event(0, (144, key, 1))
-    for key in toBeStopped:
-        port.write_midi_event(0, (128, key, 1))
-    pass
-
-def playKey(midi_key):
-    toBePlayed.append(midi_key)
-
-def stopKey(midi_key):
-    toBeStopped.append(midi_key)
+    def stopKey(self, midi_key):
+        print("stopping key " + str(midi_key) + "...")
+        self.lock.acquire()
+        self.toBeStopped.append(midi_key)
+        self.lock.release()

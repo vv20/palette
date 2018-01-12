@@ -8,5 +8,8 @@ def playTrack(trackno):
 def stopTrack(trackno):
     pass
 
+def process():
+    pass
+
 def init(port):
     midi_port = port

@@ -1,12 +1,5 @@
-import keyboard as keys
-import sampler
-import backend
-
-KEYBOARD_MODE = 1
-SAMPLER_MODE = 2
-mode = KEYBOARD_MODE
-
-pressed_keys = []
+from keyboard import Keyboard
+from backend import Backend
 
 keyboard_mappings = {
         # C-z
@@ -87,30 +80,25 @@ pad.append(55)
 pad.append(56)
 pad.append(51)
 
+pressed_keys = []
+
+be = Backend()
+
 def key_released(key):
     print("key " + str(key) + " released")
     if key in pad:
-        if mode == KEYBOARD_MODE:
-            try:
-                keys.stopKey(keyboard_mappings[key])
-            except KeyError:
-                pass
-        else:
-            sampler.stopTrack(get_track_no(key))
+        try:
+            be.keyboard.stopKey(keyboard_mappings[key])
+        except KeyError:
+            pass
 
 def key_pressed(key):
     print("key " + str(key) + " pressed")
     if key in pad:
-        if mode == KEYBOARD_MODE:
-            try:
-                keys.playKey(keyboard_mappings[key])
-            except KeyError:
-                pass
-        else:
-            sampler.playTrack(get_track_no(key))
-
-# init the jack backend
-backend.init()
+        try:
+            be.keyboard.playKey(keyboard_mappings[key])
+        except KeyError:
+            pass
 
 # open the fifo for receiving data
 fifo = open("palette.pipe", mode="rt")
@@ -120,4 +108,4 @@ while True:
     if line[0] == '+':
         key_pressed(int(line[1:]))
     else:
-        key_pressed(int(line[1:]))
+        key_released(int(line[1:]))
