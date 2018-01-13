@@ -91,9 +91,6 @@ def key_released(key):
             be.keyboard.stopKey(keyboard_mappings[key])
         except KeyError:
             pass
-        # space
-    elif key == 44:
-        pass 
 
 def key_pressed(key):
     print("key " + str(key) + " pressed")
@@ -105,6 +102,11 @@ def key_pressed(key):
         # space
     elif key == 44:
         be.control.sendMessage(Message.START)
+        # esc
+    elif key == 41:
+        print("Goodbye!")
+        fifo.close()
+        quit()
 
 # open the fifo for receiving data
 fifo = open("palette.pipe", mode="rt")

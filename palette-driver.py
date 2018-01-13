@@ -29,14 +29,20 @@ while attempts > 0:
         for key in pressed_keys:
             if key not in data:
                 pressed_keys.remove(key)
-                print("-" + str(key), file=fifo, flush=True)
+                try:
+                    print("-" + str(key), file=fifo, flush=True)
+                except BrokenPipeError:
+                    continue
         # trigger the pressed keys
         for i in range(2, len(data)):
             if data[i] == 0:
                 continue
             if data[i] not in pressed_keys:
                 pressed_keys.append(data[i])
-                print("+" + str(data[i]), file=fifo, flush=True)
+                try:
+                    print("+" + str(data[i]), file=fifo, flush=True)
+                except BrokenPipeError:
+                    continue
     except usb.USBError as e:
         data = None
         if e.args == ("Operation timed out",):
