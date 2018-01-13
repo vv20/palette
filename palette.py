@@ -1,4 +1,4 @@
-from keyboard import Keyboard
+from control import Message
 from backend import Backend
 
 keyboard_mappings = {
@@ -93,7 +93,7 @@ def key_released(key):
             pass
         # space
     elif key == 44:
-        be.on_button_midi.write_midi_event(0, (125, 0))
+        pass 
 
 def key_pressed(key):
     print("key " + str(key) + " pressed")
@@ -104,7 +104,7 @@ def key_pressed(key):
             pass
         # space
     elif key == 44:
-        pass 
+        be.control.sendMessage(Message.START)
 
 # open the fifo for receiving data
 fifo = open("palette.pipe", mode="rt")

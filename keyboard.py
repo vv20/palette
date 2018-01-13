@@ -1,4 +1,3 @@
-import numpy as np
 import jack
 from queue import Queue
 
