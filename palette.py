@@ -91,6 +91,9 @@ def key_released(key):
             be.keyboard.stopKey(keyboard_mappings[key])
         except KeyError:
             pass
+        # space
+    elif key == 44:
+        be.on_button_midi.write_midi_event(0, (125, 0))
 
 def key_pressed(key):
     print("key " + str(key) + " pressed")
@@ -99,6 +102,9 @@ def key_pressed(key):
             be.keyboard.playKey(keyboard_mappings[key])
         except KeyError:
             pass
+        # space
+    elif key == 44:
+        pass 
 
 # open the fifo for receiving data
 fifo = open("palette.pipe", mode="rt")
