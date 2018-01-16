@@ -9,22 +9,38 @@ class Interface:
         self.screen.clear()
         curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_GREEN)
 
+        self.paint_keyboard()
+
+    def paint_keyboard(self):
+        self.screen.addstr("|")
+        self.screen.addstr(" Keyboard ", curses.color_pair(1))
+        self.screen.addstr("| Sampler |")
         self.screen.addstr("|    | F# | G# | A# |    | C# | D# |    | F# | G# |\n")
         self.screen.addstr(" | F  | G  | A  | B  | C  | D  | E  | F  | G  | A  |\n")
         self.screen.addstr("  |    | C# | D# |    | F# | G# | A# |    | C# | D# |\n")
         self.screen.addstr("   | C  | D  | E  | F  | G  | A  | B  | C  | D  | E  |\n")
         self.screen.refresh()
 
+    def paint_sampler(self):
+        self.screen.addstr("| Keyboard |")
+        self.screen.addstr(" Sampler ", curses.color_pair(1))
+        self.screen.addstr("|")
+        self.screen.addstr("| 1  | 2  | 3  | 4  | 5  | 6  | 7  | 8  | 9  | 10 |\n")
+        self.screen.addstr(" | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 |\n")
+        self.screen.addstr("  | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 |\n")
+        self.screen.addstr("   | 31 | 32 | 33 | 34 | 35 | 36 | 37 | 38 | 39 | 40 |\n")
+        self.screen.refresh()
+
     def paint_key_on(self, key):
         self.screen.addstr(self.x_mappings[key], self.y_mappings[key], 
                 self.string_mappings[key], curses.color_pair(1))
-        self.screen.move(4,0)
+        self.screen.move(5,0)
         self.screen.refresh()
 
     def paint_key_off(self, key):
         self.screen.addstr(self.x_mappings[key], self.y_mappings[key], 
                 self.string_mappings[key], curses.color_pair(0))
-        self.screen.move(4,0)
+        self.screen.move(5,0)
         self.screen.refresh()
 
     def shutdown(self):
@@ -32,40 +48,40 @@ class Interface:
         curses.endwin()
 
     x_mappings = {
-            31: 0,
-            32: 0,
-            33: 0,
-            35: 0,
-            36: 0,
-            38: 0,
-            39: 0,
-            20: 1,
-            26: 1,
-            8: 1,
-            21: 1,
-            23: 1,
-            28: 1,
-            24: 1,
-            12: 1,
-            18: 1,
-            19: 1,
+            31: 1,
+            32: 1,
+            33: 1,
+            35: 1,
+            36: 1,
+            38: 1,
+            39: 1,
+            20: 2,
+            26: 2,
+            8: 2,
+            21: 2,
+            23: 2,
+            28: 2,
+            24: 2,
+            12: 2,
+            18: 2,
+            19: 2,
             22: 2,
-            7: 2,
-            10: 2,
-            11: 2,
-            13: 2,
-            15: 2,
-            51: 2,
-            29: 3,
-            27: 3,
-            6: 3,
-            25: 3,
-            5: 3,
-            17: 3,
-            16: 3,
-            54: 3,
-            55: 3,
-            56: 3
+            7: 3,
+            10: 3,
+            11: 3,
+            13: 3,
+            15: 3,
+            51: 3,
+            29: 4,
+            27: 4,
+            6: 4,
+            25: 4,
+            5: 4,
+            17: 4,
+            16: 4,
+            54: 4,
+            55: 4,
+            56: 4
     }
 
     y_mappings = {

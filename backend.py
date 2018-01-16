@@ -10,9 +10,11 @@ class Backend:
         self.client = jack.Client("palette", no_start_server = True)
         # midi ports
         self.keyboard_midi = self.client.midi_outports.register("keyboard_out")
+        self.sampler_midi = self.client.midi_outports.register("sampler_out")
         self.control_midi = self.client.midi_outports.register("control_out")
         # entities
         self.keyboard = Keyboard(self.keyboard_midi)
+        self.sampler = Keyboard(self.sampler_midi)
         self.control = Control(self.control_midi)
         # callbacks
         self.client.set_shutdown_callback(self.shutdown)
@@ -26,4 +28,5 @@ class Backend:
 
     def process(self, no_frames):
         self.keyboard.process()
+        self.sampler.process()
         self.control.process()
