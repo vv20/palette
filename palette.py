@@ -1,8 +1,9 @@
 from control import Message
 from backend import Backend
-from keyboard import keyboard_mappings
-from sampler import sampler_mappings
+from keyboard import keyboard_mappings, sampler_mappings
 from interface import Interface
+
+from enum import Enum
 
 # main pad
 pad = list(range(4, 40))
@@ -22,8 +23,10 @@ class Main:
         self.fifo = open("palette.pipe", mode = "rt")
         self.display = Interface()
         self.mode = Mode.KEYBOARD
+        self.log = open("palette.log", mode = "w")
 
     def key_released(self, key):
+        self.log.write("key " + str(key) + " released\n")
         if key in pad:
             if self.mode == Mode.KEYBOARD:
                 try:
@@ -35,6 +38,7 @@ class Main:
                 self.be.sampler.stopKey(sampler_mappings[key])
 
     def key_pressed(self, key):
+        self.log.write("key " + str(key) + " pressed\n")
         if key in pad:
             if self.mode == Mode.KEYBOARD:
                 try:
@@ -52,6 +56,21 @@ class Main:
             self.fifo.close()
             self.display.shutdown()
             quit()
+            # F1
+        elif key == 58:
+            if self.mode != Mode.KEYBOARD:
+                self.log.write("switching to keyboard mode\n")
+                self.mode = Mode.KEYBOARD
+                self.display.paint_keyboard()
+            # F2
+        elif key == 59:
+            if self.mode != Mode.SAMPLER:
+                self.log.write("switching to sampler mode\n")
+                self.mode = Mode.SAMPLER
+                self.display.paint_sampler()
+            # backspace
+        elif key == 42:
+            self.be.sampler.playKey(0)
 
 if __name__ == "__main__":
     palette = Main()

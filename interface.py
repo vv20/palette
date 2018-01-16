@@ -12,9 +12,10 @@ class Interface:
         self.paint_keyboard()
 
     def paint_keyboard(self):
+        self.screen.clear()
         self.screen.addstr("|")
         self.screen.addstr(" Keyboard ", curses.color_pair(1))
-        self.screen.addstr("| Sampler |")
+        self.screen.addstr("| Sampler |\n")
         self.screen.addstr("|    | F# | G# | A# |    | C# | D# |    | F# | G# |\n")
         self.screen.addstr(" | F  | G  | A  | B  | C  | D  | E  | F  | G  | A  |\n")
         self.screen.addstr("  |    | C# | D# |    | F# | G# | A# |    | C# | D# |\n")
@@ -22,9 +23,10 @@ class Interface:
         self.screen.refresh()
 
     def paint_sampler(self):
+        self.screen.clear()
         self.screen.addstr("| Keyboard |")
         self.screen.addstr(" Sampler ", curses.color_pair(1))
-        self.screen.addstr("|")
+        self.screen.addstr("|\n")
         self.screen.addstr("| 1  | 2  | 3  | 4  | 5  | 6  | 7  | 8  | 9  | 10 |\n")
         self.screen.addstr(" | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 |\n")
         self.screen.addstr("  | 21 | 22 | 23 | 24 | 25 | 26 | 27 | 28 | 29 | 30 |\n")
