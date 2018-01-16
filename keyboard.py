@@ -15,7 +15,7 @@ class Keyboard:
             if note == 0:
                 self.midi_port.write_midi_event(0, (176, 123, 0))
             else:
-                self.midi_port.write_midi_event(0, (144, self.toBePlayed.get(), 1))
+                self.midi_port.write_midi_event(0, (144, note, 1))
         while not self.toBeStopped.empty():
             self.midi_port.write_midi_event(0, (128, self.toBeStopped.get(), 1))
 
