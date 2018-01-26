@@ -50,7 +50,7 @@ class Main:
                 self.be.sampler.playKey(sampler_mappings[key])
             # space
         elif key == 44:
-            self.be.control.sendMessage(Message.START)
+            self.be.control.togglePlay()
             # esc
         elif key == 41:
             self.fifo.close()
