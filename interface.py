@@ -45,16 +45,31 @@ class Interface:
         self.screen.move(5,0)
         self.screen.refresh()
 
+    def paint_sample_on(self, key):
+        self.screen.addstr(self.x_mappings[key], self.y_mappings[key],
+                self.sampler_mappings[key], curses.color_pair(1))
+        self.screen.move(5,0)
+        self.screen.refresh()
+
+    def paint_sample_off(self, key):
+        self.screen.addstr(self.x_mappings[key], self.y_mappings[key],
+                self.sampler_mappings[key], curses.color_pair(0))
+        self.screen.move(5,0)
+        self.screen.refresh()
+
     def shutdown(self):
         curses.echo()
         curses.endwin()
 
     x_mappings = {
+            30: 1,
             31: 1,
             32: 1,
             33: 1,
+            34: 1,
             35: 1,
             36: 1,
+            37: 1,
             38: 1,
             39: 1,
             20: 2,
@@ -67,11 +82,14 @@ class Interface:
             12: 2,
             18: 2,
             19: 2,
-            22: 2,
+            4: 3,
+            22: 3,
             7: 3,
+            9: 3,
             10: 3,
             11: 3,
             13: 3,
+            14: 3,
             15: 3,
             51: 3,
             29: 4,
@@ -87,11 +105,14 @@ class Interface:
     }
 
     y_mappings = {
+            30: 1,
             31: 6,
             32: 11,
             33: 16,
+            34: 21,
             35: 26,
             36: 31,
+            37: 36,
             38: 41,
             39: 46,
             20: 2,
@@ -104,11 +125,14 @@ class Interface:
             12: 37,
             18: 42,
             19: 47,
+            4: 3,
             22: 8,
             7: 13,
+            9: 18,
             10: 23,
             11: 28,
             13: 33,
+            14: 38,
             15: 43,
             51: 48,
             29: 4,
@@ -158,4 +182,47 @@ class Interface:
             54: " C  ",
             55: " D  ",
             56: " E  "
+    }
+
+    sampler_mappings = {
+            30: " 1  ",
+            31: " 2  ",
+            32: " 3  ",
+            33: " 4  ",
+            34: " 5  ",
+            35: " 6  ",
+            36: " 7  ",
+            37: " 8  ",
+            38: " 9  ",
+            39: " 10",
+            20: " 11 ",
+            26: " 12 ",
+            8: " 13 ",
+            21: " 14 ",
+            23: " 15 ",
+            28: " 16 ",
+            24: " 17 ",
+            12: " 18 ",
+            18: " 19 ",
+            19: " 20 ",
+            4: " 21 ",
+            22: " 22 ",
+            7: " 23 ",
+            9: " 24 ",
+            10: " 25 ",
+            11: " 26 ",
+            13: " 27 ",
+            14: " 28 ",
+            15: " 29 ",
+            51: " 30 ",
+            29: " 31 ",
+            27: " 32 ",
+            6: " 33 ",
+            25: " 34 ",
+            5: " 35 ",
+            17: " 36 ",
+            16: " 37 ",
+            54: " 38 ",
+            55: " 39 ",
+            56: " 40 "
     }

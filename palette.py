@@ -36,6 +36,7 @@ class Main:
                     pass
             elif self.mode == Mode.SAMPLER:
                 self.be.sampler.stopKey(sampler_mappings[key])
+                self.display.paint_sample_off(key)
 
     def key_pressed(self, key):
         self.log.write("key " + str(key) + " pressed\n")
@@ -48,6 +49,7 @@ class Main:
                     pass
             elif self.mode == Mode.SAMPLER:
                 self.be.sampler.playKey(sampler_mappings[key])
+                self.display.paint_sample_on(key)
             # space
         elif key == 44:
             self.be.control.togglePlay()
