@@ -1,9 +1,8 @@
-from control import Message
 from backend import Backend
-from keyboard import keyboard_mappings, sampler_mappings
-from interface import Interface
-
-from enum import Enum
+from interface import Interface, Entity
+from instruments.keyboard import Keyboard
+from instruments.sampler import Sampler
+from instruments.drummachine import DrumMachine
 
 # main pad
 pad = list(range(4, 40))
@@ -12,67 +11,43 @@ pad.append(55)
 pad.append(56)
 pad.append(51)
 
-class Mode(Enum):
-    KEYBOARD = 1
-    SAMPLER = 2
+# headboard with instrument selection
+headboard = list(range(58, 70))
 
 class Main:
     def __init__(self):
+        constructors = [Keyboard, Sampler, DrumMachine]
+        entities = [Entity.KEYBOARD, Entity.SAMPLER, Entity.DRUM_MACHINE]
+
         self.pressed_keys = []
-        self.be = Backend()
+        self.be = Backend(constructors)
         self.fifo = open("palette.pipe", mode = "rt")
-        self.display = Interface()
-        self.mode = Mode.KEYBOARD
-        self.log = open("palette.log", mode = "w")
+        self.display = Interface(entities)
+        self.display.paint_pad(0)
+        self.current_inst_number = 0
 
     def key_released(self, key):
-        self.log.write("key " + str(key) + " released\n")
         if key in pad:
-            if self.mode == Mode.KEYBOARD:
-                try:
-                    self.be.keyboard.stopKey(keyboard_mappings[key])
-                    self.display.paint_key_off(key)
-                except KeyError:
-                    pass
-            elif self.mode == Mode.SAMPLER:
-                self.be.sampler.stopKey(sampler_mappings[key])
-                self.display.paint_sample_off(key)
+            self.be.entities[self.current_inst_number].key_released(key)
+            self.display.paint_key_off(key)
 
     def key_pressed(self, key):
-        self.log.write("key " + str(key) + " pressed\n")
         if key in pad:
-            if self.mode == Mode.KEYBOARD:
-                try:
-                    self.be.keyboard.playKey(keyboard_mappings[key])
-                    self.display.paint_key_on(key)
-                except KeyError:
-                    pass
-            elif self.mode == Mode.SAMPLER:
-                self.be.sampler.playKey(sampler_mappings[key])
-                self.display.paint_sample_on(key)
+            self.be.entities[self.current_inst_number].key_pressed(key)
+            self.display.paint_key_on(key)
             # space
         elif key == 44:
-            self.be.control.togglePlay()
+            self.be.toggle_transport()
             # esc
         elif key == 41:
             self.fifo.close()
             self.display.shutdown()
             quit()
-            # F1
-        elif key == 58:
-            if self.mode != Mode.KEYBOARD:
-                self.log.write("switching to keyboard mode\n")
-                self.mode = Mode.KEYBOARD
-                self.display.paint_keyboard()
-            # F2
-        elif key == 59:
-            if self.mode != Mode.SAMPLER:
-                self.log.write("switching to sampler mode\n")
-                self.mode = Mode.SAMPLER
-                self.display.paint_sampler()
-            # backspace
-        elif key == 42:
-            self.be.sampler.playKey(0)
+            # instrument selection
+        elif key in headboard:
+            if key - 58 < len(self.be.entities):
+                self.current_inst_number = key - 58
+                self.display.paint_pad(self.current_inst_number)
 
 if __name__ == "__main__":
     palette = Main()
