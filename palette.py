@@ -1,5 +1,8 @@
+import jack
+
 from backend import Backend
 from interface import Interface, Entity
+from metronome import Metronome
 from instruments.keyboard import Keyboard
 from instruments.sampler import Sampler
 from instruments.drummachine import DrumMachine
@@ -16,15 +19,29 @@ headboard = list(range(58, 70))
 
 class Main:
     def __init__(self):
-        constructors = [Keyboard, Sampler, DrumMachine]
+        # jack client
+        self.client = jack.Client("palette", no_start_server = True)
+        
+        # interface
         entities = [Entity.KEYBOARD, Entity.SAMPLER, Entity.DRUM_MACHINE]
-
-        self.pressed_keys = []
-        self.be = Backend(constructors)
-        self.fifo = open("palette.pipe", mode = "rt")
         self.display = Interface(entities)
-        self.display.paint_pad(0)
+
+        # metronome
+        self.metronome = Metronome(self.display, self.client)
+
+        # backend
+        constructors = [Keyboard, Sampler, DrumMachine]
+        self.be = Backend(self.client, self.metronome, constructors)
+
+        # misc
+        self.pressed_keys = []
+        self.fifo = open("palette.pipe", mode = "rt")
         self.current_inst_number = 0
+
+        # let's go
+        self.client.activate()
+        self.display.paint_pad(0)
+        self.metronome.sync_transport()
 
     def key_released(self, key):
         if key in pad:
@@ -37,7 +54,7 @@ class Main:
             self.display.paint_key_on(key)
             # space
         elif key == 44:
-            self.be.toggle_transport()
+            self.metronome.toggle_transport()
             # esc
         elif key == 41:
             self.fifo.close()
@@ -48,6 +65,12 @@ class Main:
             if key - 58 < len(self.be.entities):
                 self.current_inst_number = key - 58
                 self.display.paint_pad(self.current_inst_number)
+            # left arrow, decrement bpm
+        elif key == 80:
+            self.metronome.decrement_bpm()
+            # right arrow, increment bpm
+        elif key == 79:
+            self.metronome.increment_bpm()
 
 if __name__ == "__main__":
     palette = Main()

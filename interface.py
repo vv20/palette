@@ -2,6 +2,8 @@ import curses
 
 from enum import Enum
 
+SUBBEATS_PER_BEAT = 4
+
 x_mappings = {
         30: 1,
         31: 1,
@@ -136,42 +138,42 @@ sampler_mappings = {
         31: " 2  ",
         32: " 3  ",
         33: " 4  ",
-        34: " 5  ",
-        35: " 6  ",
-        36: " 7  ",
-        37: " 8  ",
-        38: " 9  ",
-        39: " 10 ",
-        20: " 11 ",
-        26: " 12 ",
-        8: " 13 ",
-        21: " 14 ",
-        23: " 15 ",
-        28: " 16 ",
-        24: " 17 ",
-        12: " 18 ",
-        18: " 19 ",
-        19: " 20 ",
-        4: " 21 ",
-        22: " 22 ",
-        7: " 23 ",
-        9: " 24 ",
-        10: " 25 ",
-        11: " 26 ",
-        13: " 27 ",
-        14: " 28 ",
-        15: " 29 ",
-        51: " 30 ",
-        29: " 31 ",
-        27: " 32 ",
-        6: " 33 ",
-        25: " 34 ",
-        5: " 35 ",
-        17: " 36 ",
-        16: " 37 ",
-        54: " 38 ",
-        55: " 39 ",
-        56: " 40 "
+        34: "    ",
+        35: "    ",
+        36: " C4 ",
+        37: " C#4",
+        38: " D4 ",
+        39: " D#4",
+        20: " 5  ",
+        26: " 6  ",
+        8: " 7  ",
+        21: " 8  ",
+        23: "    ",
+        28: "    ",
+        24: " E4 ",
+        12: " F4 ",
+        18: " F#4",
+        19: " G4 ",
+        4: " 9  ",
+        22: " 10 ",
+        7: " 11 ",
+        9: " 12 ",
+        10: "    ",
+        11: "    ",
+        13: " G#4",
+        14: " A4 ",
+        15: " A#4",
+        51: " B4 ",
+        29: " 13 ",
+        27: " 14 ",
+        6: " 15 ",
+        25: " 16 ",
+        5: "    ",
+        17: "    ",
+        16: " C5 ",
+        54: " C#5",
+        55: " D5 ",
+        56: " D#5"
 }
 
 drummachine_mappings = {
@@ -246,6 +248,11 @@ class Interface:
         self.entities = entities
         self.active_entity = 0
 
+        # metronome stuff
+        self.beat_type = 0
+        self.beats_per_bar = 0
+        self.bpm = 0
+
     def paint_pad(self, active_entity):
         self.screen.clear()
         self.active_entity = active_entity
@@ -264,21 +271,69 @@ class Interface:
         maps = entity_mappings[self.entities[active_entity]]
         for key in maps:
             self.screen.addstr(x_mappings[key], y_mappings[key], "|" + maps[key])
+
+        # paint the beat and the bpm
         self.screen.move(5,0)
+        self.screen.addstr("\n")
+        self.screen.addstr("Beat: " + str(self.beats_per_bar) + "/" + str(self.beat_type) + " ")
+        self.screen.addstr("BPM: " + str(self.bpm) + "\n")
+        
+        # paint the ticks
+        self.screen.addstr("-" * (self.beats_per_bar * SUBBEATS_PER_BEAT * 2 + 1))
+        self.screen.addstr("\n")
+        for i in range(0, self.beats_per_bar * SUBBEATS_PER_BEAT):
+            self.screen.addstr("| ")
+        self.screen.addstr("|\n")
+        self.screen.addstr("-" * (self.beats_per_bar * SUBBEATS_PER_BEAT * 2 + 1))
+        self.screen.move(10, 0)
         self.screen.refresh()
 
     def paint_key_on(self, key):
         maps = entity_mappings[self.entities[self.active_entity]]
         self.screen.addstr(x_mappings[key], y_mappings[key] + 1, 
                 maps[key], curses.color_pair(1))
-        self.screen.move(5,0)
+        self.screen.move(10,0)
         self.screen.refresh()
 
     def paint_key_off(self, key):
         maps = entity_mappings[self.entities[self.active_entity]]
         self.screen.addstr(x_mappings[key], y_mappings[key] + 1, 
                 maps[key], curses.color_pair(0))
-        self.screen.move(5,0)
+        self.screen.move(10,0)
+        self.screen.refresh()
+
+    def change_beat_data(self, beats_per_bar, beat_type, bpm):
+        if beats_per_bar == self.beats_per_bar and beat_type == self.beat_type and bpm == self.bpm:
+            return
+        self.beats_per_bar = beats_per_bar
+        self.beat_type = beat_type
+        self.bpm = bpm
+        self.screen.move(6,0)
+        self.screen.addstr("Beat: ")
+        self.screen.addstr(str(self.beats_per_bar))
+        self.screen.addstr("/")
+        self.screen.addstr(str(self.beat_type))
+        self.screen.addstr(" BPM: ")
+        self.screen.addstr(str(self.bpm))
+        self.screen.addstr(" " * 10) # wipe the rest of the line
+        self.screen.move(10, 0)
+        self.screen.refresh()
+
+    def paint_active_tick(self, tick_no):
+        self.screen.move(8,0)
+        for i in range(0, tick_no):
+            self.screen.addstr("| ")
+        self.screen.addstr("|")
+        self.screen.addstr(" ", curses.color_pair(1))
+        for i in range(tick_no + 1, SUBBEATS_PER_BEAT * self.beats_per_bar):
+            self.screen.addstr("| ")
+        self.screen.addstr("|")
+        self.screen.move(10,0)
+        self.screen.refresh()
+
+    def log(self, msg):
+        self.screen.addstr(msg)
+        self.screen.move(10,0)
         self.screen.refresh()
 
     def shutdown(self):

@@ -4,6 +4,9 @@ from instruments.instrument import Instrument
 
 BEATS_PER_BAR=16
 ACCENT_INCREMENT=50
+PLAY_NOTE_EVENT=144
+DEFAULT_NOTE=60
+DEFAULT_VEL=63
 
 class DrumMachine(Instrument):
     def __init__(self, port, samplerate):
@@ -13,7 +16,7 @@ class DrumMachine(Instrument):
             self.beat_bindings.append(set())
         self.muted = set()
         self.current_beat = 0
-        self.bpm = 120.0
+        self.bpm = 30.0
         self.samplerate = samplerate
         self.frames_since = 0
         self.frames_per_beat = 60 / self.bpm / BEATS_PER_BAR * samplerate
@@ -28,24 +31,24 @@ class DrumMachine(Instrument):
             26: self.unmute,
             8: self.clear
         }
-        self.samples = {
-                4: 37, # rim shot
-                22: 39, # clap
-                7: 56, # cowbell
-                9: 49, # cymbal
-                10: 46, # open hihat
-                11: 42, # closed hihat
-                13: 75, # claves
-                14: 70, # maracas
-                29: 0, # accent
-                27: 35, # bass kick
-                6: 38, # snare
-                25: 45, # low tom
-                5: 47, # med tom
-                17: 50, # high tom
-                16: 64, # low conga
-                54: 62, # mid conga
-                55: 63 # high conga
+        self.channels = {
+                4: 0, # rim shot
+                22: 1, # clap
+                7: 2, # cowbell
+                9: 3, # cymbal
+                10: 4, # open hihat
+                11: 5, # closed hihat
+                13: 6, # claves
+                14: 7, # maracas
+                29: -1, # ACCENT
+                27: 8, # bass kick
+                6: 9, # snare
+                25: 10, # low tom
+                5: 11, # med tom
+                17: 12, # high tom
+                16: 13, # low conga
+                54: 14, # mid conga
+                55: 15 # high conga
         }
 
     def process(self, no_frames):
@@ -56,17 +59,18 @@ class DrumMachine(Instrument):
             
             # check if there is an accent on this beat
             accent = False
-            if 0 in samples_to_play:
+            if -1 in samples_to_play:
                 accent = True
-                samples_to_play.remove(0)
+                samples_to_play.remove(-1)
 
             for sample in samples_to_play:
                 if sample not in self.muted:
                     if accent:
-                        self.midi_port.write_midi_event(frames_until, 
-                                (144, sample, 1 + ACCENT_INCREMENT))
+                        self.midi_port.write_midi_event(self.frames_until, 
+                                (PLAY_NOTE_EVENT + sample, DEFAULT_NOTE, DEFAULT_VEL + ACCENT_INCREMENT))
                     else:
-                        self.midi_port.write_midi_event(self.frames_until, (144, sample, 1))
+                        self.midi_port.write_midi_event(self.frames_until, 
+                                (PLAY_NOTE_EVENT + sample, DEFAULT_NOTE, DEFAULT_VEL))
 
             # set the counts to what they will be at the beginning of next round
             self.frames_since = int(no_frames - self.frames_until)
@@ -79,8 +83,8 @@ class DrumMachine(Instrument):
     def key_pressed(self, key):
         if key in self.control:
             self.current_function = self.control[key]
-        if key in self.samples:
-            self.current_function(key)
+        if key in self.channels:
+            self.current_function(self.channels[key])
 
     def key_released(self, key):
         if key in self.control:

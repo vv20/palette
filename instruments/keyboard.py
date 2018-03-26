@@ -3,6 +3,10 @@ from queue import Queue
 
 from instruments.instrument import Instrument
 
+PLAY_NOTE_EVENT = 144
+STOP_NOTE_EVENT = 128
+DEFAULT_VEL = 63
+
 class Keyboard(Instrument):
     def __init__(self, port, samplerate):
         super().__init__(port, samplerate)
@@ -17,15 +21,23 @@ class Keyboard(Instrument):
             if note == 0:
                 self.midi_port.write_midi_event(0, (176, 123, 0))
             else:
-                self.midi_port.write_midi_event(0, (144, note, 1))
+                self.midi_port.write_midi_event(0, 
+                        (PLAY_NOTE_EVENT, note, DEFAULT_VEL))
         while not self.toBeStopped.empty():
-            self.midi_port.write_midi_event(0, (128, self.toBeStopped.get(), 1))
+            self.midi_port.write_midi_event(0, 
+                    (STOP_NOTE_EVENT, self.toBeStopped.get(), DEFAULT_VEL))
 
     def key_pressed(self, key):
-        self.toBePlayed.put(keyboard_mappings[key])
+        try:
+            self.toBePlayed.put(keyboard_mappings[key])
+        except KeyError:
+            pass
 
     def key_released(self, key):
-        self.toBeStopped.put(keyboard_mappings[key])
+        try:
+            self.toBeStopped.put(keyboard_mappings[key])
+        except KeyError:
+            pass
 
 keyboard_mappings = {
         # C-z

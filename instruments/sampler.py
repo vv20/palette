@@ -3,70 +3,83 @@ from queue import Queue
 
 from instruments.instrument import Instrument
 
+PLAY_NOTE_EVENT = 144
+STOP_NOTE_EVENT = 128
+DEFAULT_NOTE = 60
+DEFAULT_VEL = 63
+
 class Sampler(Instrument):
 
     def __init__(self, port, samplerate):
         super().__init__(port, samplerate)
         self.toBePlayed = Queue()
         self.toBeStopped = Queue()
+        self.current_note = DEFAULT_NOTE
 
     def process(self, no_frames):
         self.midi_port.clear_buffer()
         while not self.toBePlayed.empty():
-            note = self.toBePlayed.get()
+            channel = self.toBePlayed.get()
             # note 0 means all notes off
-            if note == 0:
+            if channel == -1:
                 self.midi_port.write_midi_event(0, (176, 123, 0))
             else:
-                self.midi_port.write_midi_event(0, (144, note, 1))
+                self.midi_port.write_midi_event(0, 
+                        (PLAY_NOTE_EVENT + channel, self.current_note, DEFAULT_VEL))
         while not self.toBeStopped.empty():
-            self.midi_port.write_midi_event(0, (128, self.toBeStopped.get(), 1))
+            self.midi_port.write_midi_event(0, 
+                    (STOP_NOTE_EVENT + self.toBeStopped.get(), self.current_note, DEFAULT_VEL))
 
     def key_pressed(self, key):
-        self.toBePlayed.put(sampler_mappings[key])
+        if key in note_mappings:
+            self.current_note = note_mappings[key]
+        if key in channel_mappings:
+            self.toBePlayed.put(channel_mappings[key])
 
     def key_released(self, key):
-        self.toBeStopped.put(sampler_mappings[key])
+        if key in note_mappings:
+            self.current_note = DEFAULT_NOTE
+        else:
+            self.toBeStopped.put(channel_mappings[key])
 
-sampler_mappings = {
-        30: 36,
-        31: 37,
-        32: 38,
-        33: 39,
-        34: 40,
-        35: 41,
-        36: 42,
-        37: 43,
-        38: 44,
-        39: 45,
-        20: 46,
-        26: 47,
-        8: 48,
-        21: 49,
-        23: 50,
-        28: 51,
-        24: 52,
-        12: 53,
-        18: 54,
-        19: 55,
-        4: 56,
-        22: 57,
-        7: 58,
-        9: 59,
-        10: 60,
-        11: 61,
-        13: 62,
-        14: 63,
-        15: 64,
-        51: 65,
-        29: 66,
-        27: 67,
-        6: 68,
-        25: 69,
-        5: 70,
-        17: 71,
-        16: 72,
-        54: 73,
-        55: 74,
-        56: 75
+channel_mappings = {
+        # first line
+        30: 0,
+        31: 1,
+        32: 2,
+        33: 3,
+        # second line
+        20: 4,
+        26: 5,
+        8: 6,
+        21: 7,
+        # third line
+        4: 8,
+        22: 9,
+        7: 10,
+        9: 11,
+        # forth line
+        29: 12,
+        27: 13,
+        6: 14,
+        25: 15,
+}
+
+note_mappings = {
+        36: DEFAULT_NOTE,
+        37: DEFAULT_NOTE + 1,
+        38: DEFAULT_NOTE + 2,
+        39: DEFAULT_NOTE + 3,
+        24: DEFAULT_NOTE + 4,
+        12: DEFAULT_NOTE + 5,
+        18: DEFAULT_NOTE + 6,
+        19: DEFAULT_NOTE + 7,
+        13: DEFAULT_NOTE + 8,
+        14: DEFAULT_NOTE + 9,
+        15: DEFAULT_NOTE + 10,
+        51: DEFAULT_NOTE + 11,
+        16: DEFAULT_NOTE + 12,
+        54: DEFAULT_NOTE + 13,
+        55: DEFAULT_NOTE + 14,
+        56: DEFAULT_NOTE + 15,
 }
