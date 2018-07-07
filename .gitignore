@@ -1,4 +1,5 @@
 *.swp
-*__pycache__/*
+__pycache__/*
+instruments/__pycache__/*
 palette.pipe
 palette.log

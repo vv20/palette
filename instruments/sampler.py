@@ -39,7 +39,7 @@ class Sampler(Instrument):
     def key_released(self, key):
         if key in note_mappings:
             self.current_note = DEFAULT_NOTE
-        else:
+        if key in channel_mappings:
             self.toBeStopped.put(channel_mappings[key])
 
 channel_mappings = {
