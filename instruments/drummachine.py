@@ -17,7 +17,6 @@ class DrumMachine(Instrument):
         self.muted = set()
         self.current_beat = 0
         self.bpm = 30.0
-        self.samplerate = samplerate
         self.frames_since = 0
         self.frames_per_beat = 60 / self.bpm / BEATS_PER_BAR * samplerate
         self.frames_until = self.frames_per_beat

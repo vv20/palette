@@ -219,21 +219,67 @@ drummachine_mappings = {
         56: "    "
 }
 
+push_mappings = {
+        30: " 1  ",
+        31: " 2  ",
+        32: " 3  ",
+        33: " 4  ",
+        34: "    ",
+        35: "    ",
+        36: "    ",
+        37: "    ",
+        38: "    ",
+        39: "    ",
+        20: " 5  ",
+        26: " 6  ",
+        8: " 7  ",
+        21: " 8  ",
+        23: "    ",
+        28: "    ",
+        24: "    ",
+        12: "    ",
+        18: "    ",
+        19: "    ",
+        4: " 9  ",
+        22: " 10 ",
+        7: " 11 ",
+        9: " 12 ",
+        10: "    ",
+        11: "    ",
+        13: "    ",
+        14: "    ",
+        15: "    ",
+        51: "    ",
+        29: " 13 ",
+        27: " 14 ",
+        6: " 15 ",
+        25: " 16 ",
+        5: "    ",
+        17: "    ",
+        16: "    ",
+        54: "    ",
+        55: "    ",
+        56: "    "
+}
+
 class Entity(Enum):
     DRUM_MACHINE = 1,
     KEYBOARD = 2,
-    SAMPLER = 3
+    SAMPLER = 3,
+    PUSH = 4
 
 entity_names = {
         Entity.DRUM_MACHINE: " DrumMac ",
         Entity.KEYBOARD: " Keyboard",
-        Entity.SAMPLER: " Sampler "
+        Entity.SAMPLER: " Sampler ",
+        Entity.PUSH: "  Push   "
 }
 
 entity_mappings = {
         Entity.DRUM_MACHINE: drummachine_mappings,
         Entity.KEYBOARD: keyboard_mappings,
-        Entity.SAMPLER: sampler_mappings
+        Entity.SAMPLER: sampler_mappings,
+        Entity.PUSH: push_mappings
 }
 
 class Interface:

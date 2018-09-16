@@ -11,6 +11,7 @@ class LooperMode(Enum):
 class Instrument(ABC):
     def __init__(self, port, samplerate):
         self.midi_port = port
+        self.samplerate = samplerate
         # looper stuff
         self.looper_mode = LooperMode.NORMAL
         self.looper_functions = {

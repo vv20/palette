@@ -6,6 +6,7 @@ from metronome import Metronome
 from instruments.keyboard import Keyboard
 from instruments.sampler import Sampler
 from instruments.drummachine import DrumMachine
+from instruments.push import Push
 from instruments.instrument import LooperMode
 
 # main pad
@@ -33,14 +34,14 @@ class Main:
         self.client = jack.Client("palette", no_start_server = True)
         
         # interface
-        entities = [Entity.KEYBOARD, Entity.SAMPLER, Entity.DRUM_MACHINE]
+        entities = [Entity.KEYBOARD, Entity.SAMPLER, Entity.DRUM_MACHINE, Entity.PUSH]
         self.display = Interface(entities)
 
         # metronome
         self.metronome = Metronome(self.display, self.client)
 
         # backend
-        constructors = [Keyboard, Sampler, DrumMachine]
+        constructors = [Keyboard, Sampler, DrumMachine, Push]
         self.be = Backend(self.client, self.metronome, constructors)
 
         # misc
