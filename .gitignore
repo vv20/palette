@@ -3,3 +3,4 @@ __pycache__/*
 instruments/__pycache__/*
 palette.pipe
 palette.log
+.coverage
