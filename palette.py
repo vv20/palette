@@ -1,8 +1,11 @@
 from builtins import open, quit
 from enum import Enum
+import getopt
 import jack
 import json
 from queue import Queue
+import sys
+import threading
 from usb import core as usb
 
 
@@ -16,6 +19,7 @@ DEFAULT_BEAT_DENOMINATOR = 4
 DEFAULT_BPM = 120
 DEFAULT_TICKS_PER_BEAT = 1920
 CONFIG_PATH = 'config.json'
+EXITING = False
 
 
 class KeyMap(Enum):
@@ -565,13 +569,19 @@ class Backend(Singleton):
 
 
 def main():
-    palette = Main()
-    while True:
-        line = palette.fifo.readline()
+    opts, _ = getopt.getopt(sys.argv[1:], 't')
+    testRun = False
+    for opt, arg in opts:
+        testRun = opt == '-t'
+    if not testRun:
+        threading.Thread(target=driver, daemon=True).start()
+    main = Main()
+    while not EXITING:
+        line = main.fifo.readline()
         if line[0] == '+':
-            palette.keyPressed(int(line[1:]))
+            main.keyPressed(int(line[1:]))
         else:
-            palette.keyReleased(int(line[1:]))
+            main.keyReleased(int(line[1:]))
 
 
 if __name__ == '__main__':

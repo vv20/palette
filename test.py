@@ -1,6 +1,7 @@
 import mock
 import random
 import palette
+import threading
 import unittest
 
 
@@ -632,8 +633,38 @@ class BackendTests(unittest.TestCase):
 class MainFunctionTests(unittest.TestCase):
 
     def setUp(self):
+        palette.EXITING = False
         self.mockMain = patchHandler(self, 'Main')
-        pass
+        self.mockThreading = patchHandler(self, 'threading')
+        self.mockSys = patchHandler(self, 'sys')
+        self.mainThread = threading.Thread(target=palette.main, daemon=True)
+        self.mockSys.argv = ['scriptName']
+
+    def tearDown(self):
+        palette.EXITING = True
+
+    def test_main_shouldStartDriverThreadIfTestOptionNotGiven(self):
+        self.mainThread.start()
+        self.mockThreading.Thread.assert_called_once_with(target=palette.driver,
+                daemon=True)
+        self.mockThreading.Thread().start.assert_called_once()
+
+    def test_main_shouldNotStartDriverThreadIfTestOptionGiven(self):
+        self.mockSys.argv.append('-t')
+        self.mainThread.start()
+        self.mockThreading.Thread.assert_not_called()
+
+    def test_main_shouldCallKeyPressedIfLineStartsWithPlus(self):
+        key = 5
+        self.mockMain().fifo.readline.return_value = '+{0}'.format(key)
+        self.mainThread.start()
+        self.mockMain().keyPressed.assert_called_with(key)
+
+    def test_main_shouldCallKeyReleasedIfLineStartWithMinus(self):
+        key = 5
+        self.mockMain().fifo.readline.return_value = '-{0}'.format(key)
+        self.mainThread.start()
+        self.mockMain().keyReleased.assert_called_with(key)
 
 
 class DriverTests(unittest.TestCase):
