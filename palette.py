@@ -1,11 +1,11 @@
-from builtins import open, quit
+from builtins import open
 from enum import Enum
 import getopt
-import jack
 import json
 from queue import Queue
 import sys
 import threading
+import jack
 from usb import core as usb
 
 
@@ -23,6 +23,9 @@ EXITING = False
 
 
 class KeyMap(Enum):
+    '''
+    Enum that maps keyboard keys to byte values used in the USB protocol.
+    '''
     A = 4
     B = 5
     C = 6
@@ -200,6 +203,11 @@ INSTRUMENT_NUMBERS = {
 
 
 class Singleton:
+    '''
+    Abstract class that ensures there is only ever one instance of an
+    inheriting class in an application. New calls to the constructor return
+    the same instance.
+    '''
     __INSTANCE__ = None
     __INITIALISED__ = False
 
@@ -211,16 +219,25 @@ class Singleton:
 
 
 class Main:
+    '''
+    Main class of the application that handles key pressed and released logic.
+    '''
     def __init__(self):
         self.fifo = open(FIFO_NAME, mode='rt')
         self.currentInstNumber = 0
         Metronome().syncTransport()
 
     def shutdown(self):
+        '''
+        Main application shutdown callback.
+        '''
         self.fifo.close()
-        quit()
+        sys.exit()
 
     def keyReleased(self, key):
+        '''
+        Main application callback for a key being released.
+        '''
         currentInst = InstrumentRepository().instruments[self.currentInstNumber]
         if key in PAD:
             currentInst.keyReleased(key)
@@ -228,6 +245,9 @@ class Main:
             currentInst.normalMode()
 
     def keyPressed(self, key):
+        '''
+        Main application callback for a key being pressed.
+        '''
         currentInst = InstrumentRepository().instruments[self.currentInstNumber]
         def noop():
             pass
@@ -253,34 +273,31 @@ class Main:
 
 
 def driver():
-    # set up the usb magic
-    keyboard = usb.core.find(bDeviceClass=0)
-    firstInt = keyboard[0][(0,0)].bInterfaceNumber
-
+    '''
+    Procedure, to be run on a separate thread, to hijack the keyboard USB
+    connection and write key on and off events to the main application thread.
+    '''
+    keyboard = usb.find(bDeviceClass=0)
     for config in keyboard:
         for interface in config:
             if keyboard.is_kernel_driver_active(interface.bInterfaceNumber):
                 keyboard.detach_kernel_driver(interface.bInterfaceNumber);
                 print('detaching a kernel driver')
-
     keyboard.set_configuration()
     endpoint = keyboard[0][(0,0)][0]
-
-    # open the fifo for writing
     fifo = open(FIFO_NAME, mode='w')
-
     attempts = 10
     data = None
-    pressed_keys = []
+    pressedKeys = []
     while attempts > 0:
         try:
             data = keyboard.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize)
-            if data == None:
+            if data is None:
                 continue
             # clean up the keys that have been released
-            for key in pressed_keys:
+            for key in pressedKeys:
                 if key not in data:
-                    pressed_keys.remove(key)
+                    pressedKeys.remove(key)
                     try:
                         print('-' + str(key), file=fifo, flush=True)
                     except BrokenPipeError:
@@ -289,20 +306,23 @@ def driver():
             for i in range(2, len(data)):
                 if data[i] == 0:
                     continue
-                if data[i] not in pressed_keys:
-                    pressed_keys.append(data[i])
+                if data[i] not in pressedKeys:
+                    pressedKeys.append(data[i])
                     try:
                         print('+' + str(data[i]), file=fifo, flush=True)
                     except BrokenPipeError:
                         continue
-        except usb.core.USBError as e:
+        except usb.USBError as usbError:
             data = None
-            if e.args == ('Operation timed out',):
+            if usbError.args == ('Operation timed out',):
                 attempts -= 1
                 print('timeout')
 
 
 class Metronome(Singleton):
+    '''
+    Singleton class responsible for interacting with the jack transport.
+    '''
     def __init__(self):
         if self.__INITIALISED__:
             return
@@ -316,25 +336,39 @@ class Metronome(Singleton):
 
     @property
     def transportOn(self):
+        '''
+        Checks if the jack transport is rolling or not.
+        '''
         return Backend().client.transport_state != jack.STOPPED
 
     def toggleTransport(self):
+        '''
+        Stop the jack transport if it's rolling, start it if it's not.
+        '''
         return {
             True: Backend().client.transport_stop,
             False: Backend().client.transport_start,
         }[self.transportOn]()
 
-    def process(self, noOfFrames):
+    def process(self):
+        '''
+        Syncs status of the metronome with the status of jack transport, to
+        be called as part of the jack process callback.
+        '''
         if not self.transportOn:
             return
-        position = Backend().client.transport_query_struct()
-        self.beatDenominator = position['beat_type']
-        self.beatNumerator = position['beats_per_bar']
-        self.bpm = position['beats_per_minute']
-        self.beat = position['beat'] - 1
-        self.ticksUntilBeat = position['ticks_per_beat'] - position['tick']
+        _, position = Backend().client.transport_query_struct()
+        self.beatDenominator = position.beat_type
+        self.beatNumerator = position.beats_per_bar
+        self.bpm = position.beats_per_minute
+        self.beat = position.beat - 1
+        self.ticksUntilBeat = position.ticks_per_beat - position.tick
 
     def syncTransport(self):
+        '''
+        A method that syncs transport status with the status of the metronome,
+        to be called on startup.
+        '''
         _, struct = Backend().client.transport_query_struct()
         struct.bar = 1
         struct.beat = self.beat + 1
@@ -343,20 +377,31 @@ class Metronome(Singleton):
         struct.beats_per_minute = self.bpm
         struct.ticks_per_beat = self.ticksPerBeat
         struct.valid = 16
-        self.client.transport_reposition_struct(struct)
+        Backend().client.transport_reposition_struct(struct)
 
     def decrementBpm(self):
-        _, struct = self.client.transport_query_struct()
+        '''
+        Decrease the BPM of jack transport by 1.
+        '''
+        _, struct = Backend().client.transport_query_struct()
         struct.beats_per_minute -= 1
-        self.client.transport_reposition_struct(struct)
+        Backend().client.transport_reposition_struct(struct)
+        self.bpm -= 1
 
     def incrementBpm(self):
-        _, struct = self.client.transport_query_struct()
+        '''
+        Increase the BPM of jack transport by 1.
+        '''
+        _, struct = Backend().client.transport_query_struct()
         struct.beats_per_minute += 1
-        self.client.transport_reposition_struct(struct)
+        Backend().client.transport_reposition_struct(struct)
+        self.bpm += 1
 
 
 class LoopMode(Enum):
+    '''
+    Type of interaction an instrument can have with its loops.
+    '''
     NORMAL = 1
     RECORD = 2
     DELETE = 3
@@ -365,6 +410,10 @@ class LoopMode(Enum):
 
 
 class Loop:
+    '''
+    Recordable loop of an instrument, capable of recording and playing back
+    midi events.
+    '''
 
     def __init__(self):
         self.events = []
@@ -374,6 +423,11 @@ class Loop:
         self.playing = False
 
     def process(self, noOfFrames, events):
+        '''
+        The throughput method of the loop, to be called as part of the jack
+        callback. Will record events passing through if in recording mode and
+        will add recorded events to the throughput if in playing mode.
+        '''
         if self.recording:
             self.events.extend([(self.position+t, e) for t,e in events])
             self.length += noOfFrames
@@ -388,36 +442,62 @@ class Loop:
         return []
 
     def startRecording(self):
+        '''
+        Start recording the events from the process throughput.
+        '''
         self.clear()
         self.recording = True
         self.playing = False
 
     def stopRecording(self):
+        '''
+        Stop recording the events from the process throughput.
+        '''
         self.recording = False
         self.playing = True
 
     def startPlaying(self):
+        '''
+        Start injecting the recorded events into the process throughput.
+        '''
         self.playing = True
         self.recording = False
         self.position = 0
 
     def stopPlaying(self):
+        '''
+        Stop adding the recorded events to the process throughput.
+        '''
         self.playing = False
 
     def clear(self):
+        '''
+        Delete the recorded events.
+        '''
         self.events = []
+        self.position = 0
+        self.length = 0
 
     def double(self):
+        '''
+        Double the loop play time.
+        '''
         self.length = self.length * 2
 
     def half(self):
+        '''
+        Half the loop play time.
+        '''
         self.length = self.length // 2
         if self.position >= self.length:
             self.position = self.position % self.length
 
 
 class InstrumentRepository(Singleton):
-    
+    '''
+    Singleton class to encapsulate configured instruments.
+    '''
+
     def __init__(self):
         if self.__INITIALISED__:
             return
@@ -427,40 +507,50 @@ class InstrumentRepository(Singleton):
         self.__INITIALISED__ = True
 
     def process(self, noOfFrames):
+        '''
+        Process callback, to be called during the jack process callback.
+        Calls the process callback on underlying instruments.
+        '''
         for instrument in self.instruments:
             instrument.process(noOfFrames)
 
     def setClient(self, client):
+        '''
+        Assign a port from the jack client to the underlying instruments.
+        '''
         for instrument in self.instruments:
             instrument.setPort(client.midi_outports.register(instrument.name))
 
 
 class Instrument:
+    '''
+    Class representing a single key configuration on the pad.
+    '''
 
-    def __init__(self,
-                 name='',
-                 mapping={},
-                 snap=False,
-                 sticky=False,
-                 snapBeatsPerBeat=1,
-                 loopBeatsPerBeat=1,
-                 ):
-        self.name = name
-        self.mapping = mapping
-        self.snap = snap
-        self.sticky = sticky
-        self.snapBeatsPerBeat = snapBeatsPerBeat
-        self.loopBeatsPerBeat = loopBeatsPerBeat
+    def __init__(self, **kwargs):
+        self.name = kwargs['name']
+        self.mapping = kwargs['mapping']
+        self.snap = kwargs['snap']
+        self.sticky = kwargs['sticky']
+        self.snapBeatsPerBeat = kwargs['snapBeatsPerBeat']
+        self.loopBeatsPerBeat = kwargs['loopBeatsPerBeat']
         self.loopMode = LoopMode.NORMAL
         self.soundingKeys = []
         self.toBePlayed = Queue()
         self.toBeStopped = Queue()
         self.loops = [Loop() for _ in range(9)]
+        self.port = None
 
     def setPort(self, port):
+        '''
+        Process callback to be called as part of the jack callback.
+        '''
         self.port = port
 
     def process(self, noOfFrames):
+        '''
+        Process callback to be called as part of the jack callback.
+        '''
         self.port.clear_buffer()
         events = []
         ticksPerSnap = Metronome().ticksPerBeat // self.snapBeatsPerBeat
@@ -479,10 +569,13 @@ class Instrument:
             events.append(event)
         for loop in self.loops:
             loopEvents = loop.process(noOfFrames, events)
-            for t,e in loopEvents:
-                self.port.write_midi_event(t,e)
+            for time, event in loopEvents:
+                self.port.write_midi_event(time, event)
 
     def keyPressed(self, key):
+        '''
+        Callback for pressing a key on an instrument.
+        '''
         channel, note = self.mapping.get(key, (0,0))
         if not self.sticky:
             self.toBePlayed.put((channel, note))
@@ -495,11 +588,17 @@ class Instrument:
             self.toBeStopped.put((channel, note))
 
     def keyReleased(self, key):
+        '''
+        Callback for releasing a key on an instrument.
+        '''
         if not self.sticky:
             channel, note = self.mapping.get(key, (0,0))
             self.toBeStopped.put((channel, note))
 
     def loop(self, loopNumber):
+        '''
+        Invoke the loop call.
+        '''
         {
                 LoopMode.NORMAL : self.normalModeCall,
                 LoopMode.RECORD : self.recordModeCall,
@@ -509,25 +608,46 @@ class Instrument:
         }[self.loopMode](loopNumber)
 
     def deleteMode(self):
+        '''
+        Set the loop mode to deleting.
+        '''
         self.loopMode = LoopMode.DELETE
 
     def recordMode(self):
+        '''
+        Set the loop mode to recording.
+        '''
         self.loopMode = LoopMode.RECORD
 
     def halfMode(self):
+        '''
+        Set the loop mode to halving.
+        '''
         self.loopMode = LoopMode.HALF
 
     def doubleMode(self):
+        '''
+        Set the loop mode to doubling.
+        '''
         self.loopMode = LoopMode.DOUBLE
 
     def normalMode(self):
+        '''
+        Loop call for loop normal mode.
+        '''
         self.loopMode = LoopMode.NORMAL
 
     def deleteModeCall(self, loopNumber):
+        '''
+        Loop call for loop deleting mode.
+        '''
         if not self.loops[loopNumber].playing:
             self.loops[loopNumber].clear()
 
     def recordModeCall(self, loopNumber):
+        '''
+        Loop call for loop recording mode.
+        '''
         if self.loops[loopNumber].playing:
             return
         if self.loops[loopNumber].recording:
@@ -536,12 +656,21 @@ class Instrument:
             self.loops[loopNumber].startRecording()
 
     def halfModeCall(self, loopNumber):
+        '''
+        Loop call for loop halving mode.
+        '''
         self.loops[loopNumber].half()
 
     def doubleModeCall(self, loopNumber):
+        '''
+        Loop call for loop doubling mode.
+        '''
         self.loops[loopNumber].double()
 
     def normalModeCall(self, loopNumber):
+        '''
+        Loop call for normal mode.
+        '''
         if self.loops[loopNumber].playing:
             self.loops[loopNumber].stopPlaying()
         else:
@@ -549,39 +678,51 @@ class Instrument:
 
 
 class Backend(Singleton):
+    '''
+    Singleton class responsible for jack connection.
+    '''
     def __init__(self):
         if self.__INITIALISED__:
             return
         self.client = jack.Client(CLIENT_NAME, no_start_server=True)
         InstrumentRepository().setClient(self.client)
         self.client.set_shutdown_callback(self.shutdown)
-        self.client.set_process_callback(self.process)
+        self.client.set_process_callback(process)
         self.client.activate()
         self.__INITIALISED__ = True
 
     def shutdown(self):
+        '''
+        Main jack shutdown callback.
+        '''
         self.client.deactivate()
         self.client.close()
 
-    def process(self, noOfFrames):
-        Metronome().process(noOfFrames)
-        InstrumentRepository().process(noOfFrames)
+def process(noOfFrames):
+    '''
+    Main jack process callback.
+    '''
+    Metronome().process(noOfFrames)
+    InstrumentRepository().process(noOfFrames)
 
 
 def main():
+    '''
+    Main flow of the script.
+    '''
     opts, _ = getopt.getopt(sys.argv[1:], 't')
     testRun = False
-    for opt, arg in opts:
+    for opt, _ in opts:
         testRun = opt == '-t'
     if not testRun:
         threading.Thread(target=driver, daemon=True).start()
-    main = Main()
+    mainObj = Main()
     while not EXITING:
-        line = main.fifo.readline()
+        line = mainObj.fifo.readline()
         if line[0] == '+':
-            main.keyPressed(int(line[1:]))
+            mainObj.keyPressed(int(line[1:]))
         else:
-            main.keyReleased(int(line[1:]))
+            mainObj.keyReleased(int(line[1:]))
 
 
 if __name__ == '__main__':
