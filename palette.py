@@ -274,20 +274,20 @@ class Main:
             currentInst.keyPressed(key)
         elif key in LOOP_PAD:
             currentInst.loop(LOOP_NUMBERS[key])
-        elif key in HEADBOARD: 
+        elif key in HEADBOARD:
             instNumber = INSTRUMENT_NUMBERS[key]
             if instNumber < len(InstrumentRepository().instruments):
                 self.currentInstNumber = instNumber
         else:
             {
-                    KeyMap.NUMDIV: currentInst.deleteMode,
-                    KeyMap.NUMMUL: currentInst.recordMode,
-                    KeyMap.NUMSUB: currentInst.halfMode,
-                    KeyMap.NUMADD: currentInst.doubleMode,
-                    KeyMap.SPACE: Metronome().toggleTransport,
-                    KeyMap.ESC: self.shutdown,
-                    KeyMap.ARROWDOWN: Metronome().decrementBpm,
-                    KeyMap.ARROWUP: Metronome().incrementBpm,
+                KeyMap.NUMDIV: currentInst.deleteMode,
+                KeyMap.NUMMUL: currentInst.recordMode,
+                KeyMap.NUMSUB: currentInst.halfMode,
+                KeyMap.NUMADD: currentInst.doubleMode,
+                KeyMap.SPACE: Metronome().toggleTransport,
+                KeyMap.ESC: self.shutdown,
+                KeyMap.ARROWDOWN: Metronome().decrementBpm,
+                KeyMap.ARROWUP: Metronome().incrementBpm,
             }.get(key, noop)()
 
 
@@ -300,10 +300,10 @@ def driver():
     for config in keyboard:
         for interface in config:
             if keyboard.is_kernel_driver_active(interface.bInterfaceNumber):
-                keyboard.detach_kernel_driver(interface.bInterfaceNumber);
+                keyboard.detach_kernel_driver(interface.bInterfaceNumber)
                 print('detaching a kernel driver')
     keyboard.set_configuration()
-    endpoint = keyboard[0][(0,0)][0]
+    endpoint = keyboard[0][(0, 0)][0]
     fifo = open(FIFO_NAME, mode='w')
     attempts = 10
     data = None
@@ -448,14 +448,17 @@ class Loop:
         will add recorded events to the throughput if in playing mode.
         '''
         if self.recording:
-            self.events.extend([(self.position+t, e) for t,e in events])
+            self.events.extend([(self.position+t, e) for t, e in events])
             self.length += noOfFrames
             self.position += noOfFrames
             return []
         if self.playing:
             frame1 = range(self.position, min(self.position + noOfFrames, self.length))
             frame2 = range(noOfFrames - len(frame1))
-            toReturn = [(t-self.position,e) for t,e in self.events if t in frame1] + [(self.length-self.position+t,e) for t,e in self.events if t in frame2]
+            toReturn = [(t-self.position, e) for t, e in self.events
+                        if t in frame1] +\
+            [(self.length-self.position+t, e) for t, e in self.events
+             if t in frame2]
             self.position = self.position + noOfFrames % self.length
             return toReturn
         return []
@@ -595,7 +598,7 @@ class Instrument:
         '''
         Callback for pressing a key on an instrument.
         '''
-        channel, note = self.mapping.get(key, (0,0))
+        channel, note = self.mapping.get(key, (0, 0))
         if not self.sticky:
             self.toBePlayed.put((channel, note))
         if self.sticky and not key in self.soundingKeys:
@@ -611,7 +614,7 @@ class Instrument:
         Callback for releasing a key on an instrument.
         '''
         if not self.sticky:
-            channel, note = self.mapping.get(key, (0,0))
+            channel, note = self.mapping.get(key, (0, 0))
             self.toBeStopped.put((channel, note))
 
     def loop(self, loopNumber):
@@ -619,11 +622,11 @@ class Instrument:
         Invoke the loop call.
         '''
         {
-                LoopMode.NORMAL : self.normalModeCall,
-                LoopMode.RECORD : self.recordModeCall,
-                LoopMode.DELETE : self.deleteModeCall,
-                LoopMode.HALF : self.halfModeCall,
-                LoopMode.DOUBLE : self.doubleModeCall,
+            LoopMode.NORMAL : self.normalModeCall,
+            LoopMode.RECORD : self.recordModeCall,
+            LoopMode.DELETE : self.deleteModeCall,
+            LoopMode.HALF : self.halfModeCall,
+            LoopMode.DOUBLE : self.doubleModeCall,
         }[self.loopMode](loopNumber)
 
     def deleteMode(self):
@@ -721,7 +724,7 @@ def process(noOfFrames):
     '''
     Main jack process callback.
     '''
-    Metronome().process(noOfFrames)
+    Metronome().process()
     InstrumentRepository().process(noOfFrames)
 
 
