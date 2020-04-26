@@ -33,6 +33,25 @@ def patchHandler(testCase, patchName):
     return patcher.start()
 
 
+class CallOnceTests(unittest.TestCase):
+    '''
+    Test set for the callOnce decorator that ensures functions are only
+    called once.
+    '''
+
+    def setUp(self):
+        self.counter = 0
+
+    @palette.callOnce
+    def func(self):
+        self.counter += 1
+
+    def testFuncShouldOnlyRunOnce(self):
+        self.func()
+        self.func()
+        self.assertEqual(self.counter, 1)
+
+
 class SingletonTests(unittest.TestCase):
     '''
     Test set for the abstract class that ensures all subclasses only have
@@ -44,15 +63,15 @@ class SingletonTests(unittest.TestCase):
         Singleton class for testing.
         '''
         indicator = mock.MagicMock()
+
+        @palette.callOnce
         def __init__(self):
-            if self.__INITIALISED__:
-                return
             self.indicator.indicate()
-            self.__INITIALISED__ = True
 
     def setUp(self):
         self.TestSingleton.indicator.reset_mock()
         self.TestSingleton.__INSTANCE__ = None
+        palette.called = set()
 
     def testInitShouldAlwaysReturnSameInstance(self):
         '''
@@ -85,7 +104,7 @@ class MainTests(unittest.TestCase):
     def setUp(self):
         self.mockOpen = patchHandler(self, 'open')
         self.mockMetronome = patchHandler(self, 'Metronome')
-        self.mockQuit = patchHandler(self, 'quit')
+        self.mockSys = patchHandler(self, 'sys')
         self.noOfInst = 5
         self.instruments = [mock.MagicMock() for _ in range(self.noOfInst)]
         self.mockInstRepo = patchHandler(self, 'InstrumentRepository')
@@ -200,7 +219,7 @@ class MainTests(unittest.TestCase):
         '''
         self.main.keyPressed(palette.KeyMap.ESC)
         self.mockOpen().close.assert_called_once()
-        self.mockQuit.assert_called_once()
+        self.mockSys.exit.assert_called_once()
 
     def testKeyPressedShouldCallDecrementBPMOnMetronome(self):
         '''
@@ -264,16 +283,15 @@ class MetronomeTests(unittest.TestCase):
         self.beat = 1
         self.tick = 5
         self.ticksPerBeat = 1921
-        self.transportStruct = {
-            'beat_type' : self.beatType,
-            'beats_per_bar': self.beatsPerBar,
-            'beats_per_minute': self.beatsPerMinute,
-            'beat': self.beat,
-            'tick': self.tick,
-            'ticks_per_beat': self.ticksPerBeat
-        }
+        self.transportStruct = mock.MagicMock()
+        self.transportStruct.beat_type = self.beatType
+        self.transportStruct.beats_per_bar = self.beatsPerBar
+        self.transportStruct.beats_per_minute = self.beatsPerMinute
+        self.transportStruct.beat = self.beat
+        self.transportStruct.tick = self.tick
+        self.transportStruct.ticks_per_beat = self.ticksPerBeat
         self.mockBackend().client.transport_query_struct.return_value = \
-                self.transportStruct
+                (None, self.transportStruct)
         self.noOfFrames = 10
 
     def testInitShouldAlwaysReturnSameInstance(self):
@@ -339,6 +357,24 @@ class MetronomeTests(unittest.TestCase):
         self.assertEqual(palette.Metronome().beat, self.beat - 1)
         self.assertEqual(palette.Metronome().ticksUntilBeat,
                          self.ticksPerBeat - self.tick)
+
+    def testDecrementBPMShouldQueryJackTransport(self):
+        self.fail()
+
+    def testDecrementBPMShouldDecreaseBPMBy1(self):
+        self.fail()
+
+    def testDecrementBPMShouldSaveBPMToMetronome(self):
+        self.fail()
+
+    def testIncrementBPMShouldQueryJackTransport(self):
+        self.fail()
+
+    def testIncrementBPMShouldIncreaseBPMBy1(self):
+        self.fail()
+
+    def testIncrementBPMShouldSaveBPMToMetronome(self):
+        self.fail()
 
 
 class LoopTests(unittest.TestCase):
@@ -423,6 +459,7 @@ class LoopTests(unittest.TestCase):
         self.loop.startRecording()
         self.loop.process(self.noOfFrames, self.events)
         self.loop.stopRecording()
+        self.loop.stopPlaying()
         self.loop.clear()
         self.assertEqual(self.loop.process(self.noOfFrames, []), [])
 
@@ -473,6 +510,7 @@ class InstrumentRepositoryTests(unittest.TestCase):
 
     def setUp(self):
         palette.InstrumentRepository.__INSTANCE__ = None
+        palette.called = set()
         self.mockOpen = patchHandler(self, 'open')
         self.mockJson = patchHandler(self, 'json')
         self.mockInstrument = patchHandler(self, 'Instrument')
@@ -725,16 +763,26 @@ class InstrumentTests(unittest.TestCase):
                                         sticky=False)
         loopNumber = 0
         self.loops[loopNumber].playing = False
+        self.loops[loopNumber].recording = False
         instrument.deleteMode()
         instrument.loop(loopNumber)
         self.loops[loopNumber].clear.assert_called_once()
 
-    def testDeleteModeShouldNatCallClearIfTheLoopIsRecording(self):
+    def testDeleteModeShouldNotCallClearIfTheLoopIsRecording(self):
         '''
         Test that the loop callback in deleting mode does not delete the
         loop if it's recording.
         '''
-        self.fail()
+        instrument = palette.Instrument(name=self.name,
+                                        mapping=self.mapping,
+                                        snap=False,
+                                        sticky=False)
+        loopNumber = 0
+        self.loops[loopNumber].playing = False
+        self.loops[loopNumber].recording = True
+        instrument.deleteMode()
+        instrument.loop(loopNumber)
+        self.loops[loopNumber].clear.assert_not_called()
 
     def testDeleteModeShouldNotCallClearIfTheLoopIsPlaying(self):
         '''
@@ -895,6 +943,7 @@ class BackendTests(unittest.TestCase):
 
     def setUp(self):
         palette.Backend.__INSTANCE__ = None
+        palette.called = set()
         self.jack = patchHandler(self, 'jack')
         self.instRepo = patchHandler(self, 'InstrumentRepository')
         self.metronome = patchHandler(self, 'Metronome')
@@ -935,7 +984,7 @@ class BackendTests(unittest.TestCase):
         Test that the backend constructor sets the jack process callback.
         '''
         self.jack.Client().set_process_callback.assert_called_once_with(
-            self.backend.process)
+            palette.process)
 
     def testInitShouldActivateClient(self):
         '''
@@ -957,22 +1006,6 @@ class BackendTests(unittest.TestCase):
         '''
         self.backend.shutdown()
         self.jack.Client().close.assert_called_once()
-
-    def testProcessShouldProcessMetronome(self):
-        '''
-        Test that the process callback of the backend calls the process callback
-        of the metronome.
-        '''
-        self.backend.process(self.noOfFrames)
-        self.metronome().process.assert_called_once_with(self.noOfFrames)
-
-    def testProcessShouldProcessInsturmentRepository(self):
-        '''
-        Test that the process callback of the backend calls the process callback
-        of the instrument repository.
-        '''
-        self.backend.process(self.noOfFrames)
-        self.instRepo().process.assert_called_once_with(self.noOfFrames)
 
 
 class MainFunctionTests(unittest.TestCase):
@@ -1039,6 +1072,32 @@ class DriverTests(unittest.TestCase):
     def setUp(self):
         pass
 
+class ProcessCallbackTests(unittest.TestCase):
+    '''
+    Test set for the jack process callback.
+    '''
+
+    def setUp(self):
+        self.mockMetronome = patchHandler(self, 'Metronome')
+        self.mockInstRepo = patchHandler(self, 'InstrumentRepository')
+        self.noOfFrames = 10
+
+    def testProcessShouldProcessMetronome(self):
+        '''
+        Test that the main process callback calls the process
+        callback of the metronome.
+        '''
+        palette.process(self.noOfFrames)
+        self.mockMetronome().process.assert_called_once_with()
+
+    def testProcessShouldProcessInsturmentRepository(self):
+        '''
+        Test that the main process callback calls the process
+        callback of the instrument repository.
+        '''
+        palette.process(self.noOfFrames)
+        self.mockInstRepo().process.assert_called_once_with(self.noOfFrames)
+
 
 def main():
     '''
@@ -1055,6 +1114,8 @@ def main():
     suite.addTests(loader.loadTestsFromTestCase(BackendTests))
     suite.addTests(loader.loadTestsFromTestCase(MainFunctionTests))
     suite.addTests(loader.loadTestsFromTestCase(DriverTests))
+    suite.addTests(loader.loadTestsFromTestCase(CallOnceTests))
+    suite.addTests(loader.loadTestsFromTestCase(ProcessCallbackTests))
     unittest.TextTestRunner(verbosity=2).run(suite)
 
 

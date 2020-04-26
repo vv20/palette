@@ -220,6 +220,15 @@ INSTRUMENT_NUMBERS = {
         KeyMap.F12.value: 11,
 }
 
+called = set()
+def callOnce(f):
+    global called
+    def inner(*args, **kwargs):
+        if f not in called:
+            f(*args, **kwargs)
+            called.add(f)
+    return inner
+
 
 class Singleton:
     '''
@@ -228,7 +237,6 @@ class Singleton:
     the same instance.
     '''
     __INSTANCE__ = None
-    __INITIALISED__ = False
 
     @classmethod
     def __new__(cls, *args, **kwargs):
@@ -342,16 +350,14 @@ class Metronome(Singleton):
     '''
     Singleton class responsible for interacting with the jack transport.
     '''
+    @callOnce
     def __init__(self):
-        if self.__INITIALISED__:
-            return
         self.beat = 0
         self.beatNumerator = DEFAULT_BEAT_NUMERATOR
         self.beatDenominator = DEFAULT_BEAT_DENOMINATOR
         self.bpm = DEFAULT_BPM
         self.ticksPerBeat = DEFAULT_TICKS_PER_BEAT
         self.ticksUntilBeat = self.ticksPerBeat
-        self.__INITIALISED__ = True
 
     @property
     def transportOn(self):
@@ -405,7 +411,7 @@ class Metronome(Singleton):
         _, struct = Backend().client.transport_query_struct()
         struct.beats_per_minute -= 1
         Backend().client.transport_reposition_struct(struct)
-        self.bpm -= 1
+        self.bpm = struct.beats_per_minute
 
     def incrementBpm(self):
         '''
@@ -414,7 +420,7 @@ class Metronome(Singleton):
         _, struct = Backend().client.transport_query_struct()
         struct.beats_per_minute += 1
         Backend().client.transport_reposition_struct(struct)
-        self.bpm += 1
+        self.bpm = struct.beats_per_minute
 
 
 class LoopMode(Enum):
@@ -440,6 +446,7 @@ class Loop:
         self.length = 0
         self.recording = False
         self.playing = False
+        self.offset = 0
 
     def process(self, noOfFrames, events):
         '''
@@ -453,7 +460,8 @@ class Loop:
             self.position += noOfFrames
             return []
         if self.playing:
-            frame1 = range(self.position, min(self.position + noOfFrames, self.length))
+            frame1 = range(self.position, min(self.position + noOfFrames,
+                                              self.length))
             frame2 = range(noOfFrames - len(frame1))
             toReturn = [(t-self.position, e) for t, e in self.events
                         if t in frame1] +\
@@ -463,7 +471,7 @@ class Loop:
             return toReturn
         return []
 
-    def startRecording(self):
+    def startRecording(self, offset):
         '''
         Start recording the events from the process throughput.
         '''
@@ -471,14 +479,14 @@ class Loop:
         self.recording = True
         self.playing = False
 
-    def stopRecording(self):
+    def stopRecording(self, offset):
         '''
         Stop recording the events from the process throughput.
         '''
         self.recording = False
         self.playing = True
 
-    def startPlaying(self):
+    def startPlaying(self, offset):
         '''
         Start injecting the recorded events into the process throughput.
         '''
@@ -486,7 +494,7 @@ class Loop:
         self.recording = False
         self.position = 0
 
-    def stopPlaying(self):
+    def stopPlaying(self, offset):
         '''
         Stop adding the recorded events to the process throughput.
         '''
@@ -520,13 +528,11 @@ class InstrumentRepository(Singleton):
     Singleton class to encapsulate configured instruments.
     '''
 
+    @callOnce
     def __init__(self):
-        if self.__INITIALISED__:
-            return
         with open(CONFIG_PATH, 'r') as configFile:
             config = json.load(configFile)
             self.instruments = [Instrument(**c) for c in config]
-        self.__INITIALISED__ = True
 
     def process(self, noOfFrames):
         '''
@@ -552,10 +558,10 @@ class Instrument:
     def __init__(self, **kwargs):
         self.name = kwargs['name']
         self.mapping = kwargs['mapping']
-        self.snap = kwargs['snap']
-        self.sticky = kwargs['sticky']
-        self.snapBeatsPerBeat = kwargs['snapBeatsPerBeat']
-        self.loopBeatsPerBeat = kwargs['loopBeatsPerBeat']
+        self.snap = kwargs.get('snap', False)
+        self.sticky = kwargs.get('sticky', False)
+        self.snapBeatsPerBeat = kwargs.get('snapBeatsPerBeat', 1)
+        self.loopBeatsPerBeat = kwargs.get('loopBeatsPerBeat', 1)
         self.loopMode = LoopMode.NORMAL
         self.soundingKeys = []
         self.toBePlayed = Queue()
@@ -663,8 +669,9 @@ class Instrument:
         '''
         Loop call for loop deleting mode.
         '''
-        if not self.loops[loopNumber].playing:
-            self.loops[loopNumber].clear()
+        if self.loops[loopNumber].playing or self.loops[loopNumber].recording:
+            return
+        self.loops[loopNumber].clear()
 
     def recordModeCall(self, loopNumber):
         '''
@@ -703,15 +710,13 @@ class Backend(Singleton):
     '''
     Singleton class responsible for jack connection.
     '''
+    @callOnce
     def __init__(self):
-        if self.__INITIALISED__:
-            return
         self.client = jack.Client(CLIENT_NAME, no_start_server=True)
         InstrumentRepository().setClient(self.client)
         self.client.set_shutdown_callback(self.shutdown)
         self.client.set_process_callback(process)
         self.client.activate()
-        self.__INITIALISED__ = True
 
     def shutdown(self):
         '''
