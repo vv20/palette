@@ -1070,7 +1070,31 @@ class DriverTests(unittest.TestCase):
     '''
 
     def setUp(self):
-        pass
+        palette.EXITING = False
+        self.mockUsb = patchHandler(self, 'usb')
+        self.mockOpen = patchHandler(self, 'open')
+
+    def tearDown(self):
+        palette.EXITING = True
+
+    def testInitShouldSearchUSBDeviceClass(self):
+        self.fail()
+
+    def testInitShouldDetachKernelDrivers(self):
+        self.fail()
+
+    def testInitShouldSetConfiguration(self):
+        self.fail()
+
+    def testInitShouldOpenFIFOFileForWriting(self):
+        self.fail()
+
+    def testRunInTestModeShouldReadStdin(self):
+        self.fail()
+
+    def testRunInNormalModeShouldReadUSB(self):
+        self.fail()
+
 
 class ProcessCallbackTests(unittest.TestCase):
     '''

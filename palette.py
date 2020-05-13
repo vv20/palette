@@ -299,51 +299,51 @@ class Main:
             }.get(key, noop)()
 
 
-def driver():
+class Driver:
     '''
-    Procedure, to be run on a separate thread, to hijack the keyboard USB
-    connection and write key on and off events to the main application thread.
+    Class responsible for hijacking the keyboard USB connection and writing
+    key on and off events to the FIFO file to be consumed by the main
+    application thread. If initialised in test mode, will consume information
+    from stdin instead.
     '''
-    keyboard = usb.find(bDeviceClass=0)
-    for config in keyboard:
-        for interface in config:
-            if keyboard.is_kernel_driver_active(interface.bInterfaceNumber):
-                keyboard.detach_kernel_driver(interface.bInterfaceNumber)
-                print('detaching a kernel driver')
-    keyboard.set_configuration()
-    endpoint = keyboard[0][(0, 0)][0]
-    fifo = open(FIFO_NAME, mode='w')
-    attempts = 10
-    data = None
-    pressedKeys = []
-    while attempts > 0:
-        try:
-            data = keyboard.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize)
-            if data is None:
-                continue
-            # clean up the keys that have been released
-            for key in pressedKeys:
-                if key not in data:
-                    pressedKeys.remove(key)
-                    try:
-                        print('-' + str(key), file=fifo, flush=True)
-                    except BrokenPipeError:
-                        continue
-            # trigger the pressed keys
-            for i in range(2, len(data)):
-                if data[i] == 0:
-                    continue
-                if data[i] not in pressedKeys:
-                    pressedKeys.append(data[i])
-                    try:
-                        print('+' + str(data[i]), file=fifo, flush=True)
-                    except BrokenPipeError:
-                        continue
-        except usb.USBError as usbError:
-            data = None
-            if usbError.args == ('Operation timed out',):
-                attempts -= 1
-                print('timeout')
+
+    def __init__(self, testMode=False):
+        if testMode:
+            self.readInput = self.readStdin
+        else:
+            self.readInput = self.readUSB
+            self.keyboard = usb.find(bDeviceClass=0)
+            for config in self.keyboard:
+                for interface in config:
+                    inNo = interface.bInterfaceNumber
+                    if self.keyboard.is_kernel_driver_active(inNo):
+                        self.keyboard.detach_kernel_driver(inNo)
+            self.keyboard.set_configuration()
+            self.endpoint = self.keyboard[0][(0, 0)][0]
+        self.outputDest = open(FIFO_NAME, mode='w')
+        self.pressedKeys = []
+
+    def readStdin(self):
+        '''
+        Read input from the standard input stream.
+        '''
+        return sys.stdin.read()
+
+    def readUSB(self):
+        '''
+        Read input from the USB port.
+        '''
+        return keyboard.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize)
+
+    def run(self):
+        while not EXITING:
+            data = self.readInput()
+            [print('-' + key, file=self.outputDest, flush=True) for key\
+                    in self.pressedKeys if key not in data]
+            pressedKeys = [key for key in data[2:] if key != 0]
+            self.pressedKeys.extend(pressedKeys)
+            [print('+' + key, file=self.outputDest, flush=True) for key\
+                    in pressedKeys]
 
 
 class Metronome(Singleton):

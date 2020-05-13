@@ -4,3 +4,4 @@ instruments/__pycache__/*
 palette.pipe
 palette.log
 .coverage
+.venv/*
