@@ -33,4 +33,7 @@ jobs:
         flake8 . --ignore=E741 --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Test with pytest
       run: |
-        pytest --cov=. test.py
+        pytest test.py
+    - name: Check code coverage with pytest
+      run: |
+        pytest --cov=. --cov-fail-under=100 test.py
