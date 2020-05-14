@@ -198,8 +198,9 @@ class MainTests(unittest.TestCase):
 
     def testKeyPressedShouldCallDoubleModeOnCurrentInstrument(self):
         '''
-        Test that the keyPressed callback, when called with the numpad plus key,
-        sets the loop callback of the current instrument to doubling mode.
+        Test that the keyPressed callback, when called with the numpad plus
+        key, sets the loop callback of the current instrument to doubling
+        mode.
         '''
         self.main.keyPressed(palette.KeyMap.NUMADD)
         self.instruments[0].doubleMode.assert_called_once()
@@ -291,7 +292,7 @@ class MetronomeTests(unittest.TestCase):
         self.transportStruct.tick = self.tick
         self.transportStruct.ticks_per_beat = self.ticksPerBeat
         self.mockBackend().client.transport_query_struct.return_value = \
-                (None, self.transportStruct)
+            (None, self.transportStruct)
         self.noOfFrames = 10
 
     def testInitShouldAlwaysReturnSameInstance(self):
@@ -438,8 +439,8 @@ class LoopTests(unittest.TestCase):
         self.loop.process(self.noOfFrames, [])
         self.loop.process(self.noOfFrames, self.events)
         self.loop.stopRecording()
-        expectedEvents = [(t+self.noOfFrames, e) for t, e in self.events]
-        actualEvents = self.loop.process(self.noOfFrames*2, [])
+        expectedEvents = [(t + self.noOfFrames, e) for t, e in self.events]
+        actualEvents = self.loop.process(self.noOfFrames * 2, [])
         self.assertEqual(actualEvents, expectedEvents)
 
     def testProcessShouldReturnEmptyListIfPlayingStartedThenStopped(self):
@@ -484,11 +485,12 @@ class LoopTests(unittest.TestCase):
         self.loop.process(self.noOfFrames, self.events)
         self.loop.stopRecording()
         self.loop.half()
-        expectedEvents = [(t, e) for t, e in \
-                self.events if t < self.noOfFrames/2]
-        expectedEvents += [(t+self.noOfFrames//2, e) for t, e in \
-                self.events if t < self.noOfFrames/2]
-        self.assertEqual(self.loop.process(self.noOfFrames, []), expectedEvents)
+        expectedEvents = [(t, e) for t, e in
+                          self.events if t < self.noOfFrames / 2]
+        expectedEvents += [(t + self.noOfFrames // 2, e) for t, e in
+                           self.events if t < self.noOfFrames / 2]
+        self.assertEqual(self.loop.process(self.noOfFrames, []),
+                         expectedEvents)
 
     def testProcessShouldReturnAllEventsIfHalfThenDoubleAreCalled(self):
         '''
@@ -613,7 +615,7 @@ class InstrumentTests(unittest.TestCase):
         self.note1 = 1
         self.channel1 = 2
         self.mapping = {
-            self.key1 : (self.channel1, self.note1),
+            self.key1: (self.channel1, self.note1),
         }
         self.snapBeatsPerBeat = 4
         self.loopBeatPerBeat = 2
@@ -712,7 +714,7 @@ class InstrumentTests(unittest.TestCase):
         instrument.setPort(self.port)
         instrument.keyPressed(self.key1)
         instrument.process(self.noOfFrames)
-        event = (palette.PLAY_NOTE_EVENT+self.channel1,
+        event = (palette.PLAY_NOTE_EVENT + self.channel1,
                  self.note1, palette.DEFAULT_VEL)
         for loop in self.loops:
             loop.process.assert_called_once_with(self.noOfFrames, [event])
@@ -733,7 +735,7 @@ class InstrumentTests(unittest.TestCase):
         instrument.keyPressed(self.key1)
         instrument.process(self.noOfFrames)
         offset = self.ticksPerBeat // self.snapBeatsPerBeat - 1
-        event = (palette.PLAY_NOTE_EVENT+self.channel1,
+        event = (palette.PLAY_NOTE_EVENT + self.channel1,
                  self.note1, palette.DEFAULT_VEL)
         self.port.write_midi_event.assert_called_once_with(offset, event)
 
@@ -747,7 +749,7 @@ class InstrumentTests(unittest.TestCase):
                                         snap=False,
                                         sticky=False)
         instrument.setPort(self.port)
-        event = (palette.PLAY_NOTE_EVENT+self.channel1,
+        event = (palette.PLAY_NOTE_EVENT + self.channel1,
                  self.note1, palette.DEFAULT_VEL)
         self.loops[0].process.return_value = [(0, event)]
         instrument.process(self.noOfFrames)
@@ -925,13 +927,15 @@ class InstrumentTests(unittest.TestCase):
 
     def testNormalModeShouldQuantisePlayToGivenBeats(self):
         '''
-        Test that, when a loop is started, it doesn't start until the next beat.
+        Test that, when a loop is started, it doesn't start until
+        the next beat.
         '''
         self.fail()
 
     def testNormalModeShouldQuantiseStopToGivenBeats(self):
         '''
-        Test that, when a loop is stopped, it keeps playing until the next beat.
+        Test that, when a loop is stopped, it keeps playing until
+        the next beat.
         '''
         self.fail()
 

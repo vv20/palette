@@ -116,6 +116,7 @@ class KeyMap(Enum):
     F11 = 68
     F12 = 69
 
+
 PAD = set([
     KeyMap.A.value,
     KeyMap.B.value,
@@ -179,15 +180,15 @@ LOOP_OPS = set([
 ])
 
 LOOP_NUMBERS = {
-        KeyMap.NUMPAD1.value: 0,
-        KeyMap.NUMPAD2.value: 1,
-        KeyMap.NUMPAD3.value: 2,
-        KeyMap.NUMPAD4.value: 3,
-        KeyMap.NUMPAD5.value: 4,
-        KeyMap.NUMPAD6.value: 5,
-        KeyMap.NUMPAD7.value: 6,
-        KeyMap.NUMPAD8.value: 7,
-        KeyMap.NUMPAD9.value: 8,
+    KeyMap.NUMPAD1.value: 0,
+    KeyMap.NUMPAD2.value: 1,
+    KeyMap.NUMPAD3.value: 2,
+    KeyMap.NUMPAD4.value: 3,
+    KeyMap.NUMPAD5.value: 4,
+    KeyMap.NUMPAD6.value: 5,
+    KeyMap.NUMPAD7.value: 6,
+    KeyMap.NUMPAD8.value: 7,
+    KeyMap.NUMPAD9.value: 8,
 }
 
 HEADBOARD = set([
@@ -206,23 +207,26 @@ HEADBOARD = set([
 ])
 
 INSTRUMENT_NUMBERS = {
-        KeyMap.F1.value: 0,
-        KeyMap.F2.value: 1,
-        KeyMap.F3.value: 2,
-        KeyMap.F4.value: 3,
-        KeyMap.F5.value: 4,
-        KeyMap.F6.value: 5,
-        KeyMap.F7.value: 6,
-        KeyMap.F8.value: 7,
-        KeyMap.F9.value: 8,
-        KeyMap.F10.value: 9,
-        KeyMap.F11.value: 10,
-        KeyMap.F12.value: 11,
+    KeyMap.F1.value: 0,
+    KeyMap.F2.value: 1,
+    KeyMap.F3.value: 2,
+    KeyMap.F4.value: 3,
+    KeyMap.F5.value: 4,
+    KeyMap.F6.value: 5,
+    KeyMap.F7.value: 6,
+    KeyMap.F8.value: 7,
+    KeyMap.F9.value: 8,
+    KeyMap.F10.value: 9,
+    KeyMap.F11.value: 10,
+    KeyMap.F12.value: 11,
 }
 
 called = set()
+
+
 def callOnce(f):
     global called
+
     def inner(*args, **kwargs):
         if f not in called:
             f(*args, **kwargs)
@@ -265,7 +269,8 @@ class Main:
         '''
         Main application callback for a key being released.
         '''
-        currentInst = InstrumentRepository().instruments[self.currentInstNumber]
+        currentInst = InstrumentRepository().instruments[
+            self.currentInstNumber]
         if key in PAD:
             currentInst.keyReleased(key)
         elif key in LOOP_OPS:
@@ -276,6 +281,7 @@ class Main:
         Main application callback for a key being pressed.
         '''
         currentInst = InstrumentRepository().instruments[self.currentInstNumber]
+
         def noop():
             pass
         if key in PAD:
@@ -333,17 +339,19 @@ class Driver:
         '''
         Read input from the USB port.
         '''
-        return keyboard.read(endpoint.bEndpointAddress, endpoint.wMaxPacketSize)
+        return self.keyboard.read(
+            self.endpoint.bEndpointAddress,
+            self.endpoint.wMaxPacketSize)
 
     def run(self):
         while not EXITING:
             data = self.readInput()
-            [print('-' + key, file=self.outputDest, flush=True) for key\
-                    in self.pressedKeys if key not in data]
+            [print('-' + key, file=self.outputDest, flush=True) for key
+                in self.pressedKeys if key not in data]
             pressedKeys = [key for key in data[2:] if key != 0]
             self.pressedKeys.extend(pressedKeys)
-            [print('+' + key, file=self.outputDest, flush=True) for key\
-                    in pressedKeys]
+            [print('+' + key, file=self.outputDest, flush=True) for key
+                in pressedKeys]
 
 
 class Metronome(Singleton):
@@ -455,7 +463,7 @@ class Loop:
         will add recorded events to the throughput if in playing mode.
         '''
         if self.recording:
-            self.events.extend([(self.position+t, e) for t, e in events])
+            self.events.extend([(self.position + t, e) for t, e in events])
             self.length += noOfFrames
             self.position += noOfFrames
             return []
@@ -463,10 +471,8 @@ class Loop:
             frame1 = range(self.position, min(self.position + noOfFrames,
                                               self.length))
             frame2 = range(noOfFrames - len(frame1))
-            toReturn = [(t-self.position, e) for t, e in self.events
-                        if t in frame1] +\
-            [(self.length-self.position+t, e) for t, e in self.events
-             if t in frame2]
+            toReturn = [(t - self.position, e) for t, e in self.events if t in frame1] +\
+                [(self.length - self.position + t, e) for t, e in self.events if t in frame2]
             self.position = self.position + noOfFrames % self.length
             return toReturn
         return []
@@ -582,17 +588,17 @@ class Instrument:
         self.port.clear_buffer()
         events = []
         ticksPerSnap = Metronome().ticksPerBeat // self.snapBeatsPerBeat
-        offset = 0 if not self.snap else ticksPerSnap-Metronome().ticksUntilBeat
+        offset = 0 if not self.snap else ticksPerSnap - Metronome().ticksUntilBeat
         if self.snap and offset > noOfFrames:
             return
         while not self.toBePlayed.empty():
             channel, note = self.toBePlayed.get()
-            event = (PLAY_NOTE_EVENT+channel, note, DEFAULT_VEL)
+            event = (PLAY_NOTE_EVENT + channel, note, DEFAULT_VEL)
             self.port.write_midi_event(offset, event)
             events.append(event)
         while not self.toBeStopped.empty():
             channel, note = self.toBeStopped.get()
-            event = (STOP_NOTE_EVENT+channel, note, DEFAULT_VEL)
+            event = (STOP_NOTE_EVENT + channel, note, DEFAULT_VEL)
             self.port.write_midi_event(offset, event)
             events.append(event)
         for loop in self.loops:
@@ -607,7 +613,7 @@ class Instrument:
         channel, note = self.mapping.get(key, (0, 0))
         if not self.sticky:
             self.toBePlayed.put((channel, note))
-        if self.sticky and not key in self.soundingKeys:
+        if self.sticky and key not in self.soundingKeys:
             self.soundingKeys.append(key)
             self.toBePlayed.put((channel, note))
             return
@@ -628,11 +634,11 @@ class Instrument:
         Invoke the loop call.
         '''
         {
-            LoopMode.NORMAL : self.normalModeCall,
-            LoopMode.RECORD : self.recordModeCall,
-            LoopMode.DELETE : self.deleteModeCall,
-            LoopMode.HALF : self.halfModeCall,
-            LoopMode.DOUBLE : self.doubleModeCall,
+            LoopMode.NORMAL: self.normalModeCall,
+            LoopMode.RECORD: self.recordModeCall,
+            LoopMode.DELETE: self.deleteModeCall,
+            LoopMode.HALF: self.halfModeCall,
+            LoopMode.DOUBLE: self.doubleModeCall,
         }[self.loopMode](loopNumber)
 
     def deleteMode(self):
@@ -725,6 +731,7 @@ class Backend(Singleton):
         self.client.deactivate()
         self.client.close()
 
+
 def process(noOfFrames):
     '''
     Main jack process callback.
@@ -738,11 +745,11 @@ def main():
     Main flow of the script.
     '''
     opts, _ = getopt.getopt(sys.argv[1:], 't')
-    testRun = False
+    testMode = False
     for opt, _ in opts:
-        testRun = opt == '-t'
-    if not testRun:
-        threading.Thread(target=driver, daemon=True).start()
+        testMode = opt == '-t'
+    driver = Driver(testMode=testMode)
+    threading.Thread(target=driver.run, daemon=True).start()
     mainObj = Main()
     while not EXITING:
         line = mainObj.fifo.readline()
