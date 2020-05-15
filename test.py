@@ -1020,32 +1020,39 @@ class MainFunctionTests(unittest.TestCase):
     def setUp(self):
         palette.EXITING = False
         self.mockMain = patchHandler(self, 'Main')
+        self.mockDriver = patchHandler(self, 'Driver')
         self.mockThreading = patchHandler(self, 'threading')
         self.mockSys = patchHandler(self, 'sys')
-        self.mainThread = threading.Thread(target=palette.main, daemon=True)
         self.mockSys.argv = ['scriptName']
+        self.mainThread = threading.Thread(target=palette.main, daemon=True)
 
     def tearDown(self):
         palette.EXITING = True
 
-    def testMainShouldStartDriverThreadIfTestOptionNotGiven(self):
+    def testMainShouldStartDriverInNormalModeIfTestOptionNotGiven(self):
         '''
         Test that the main function starts the driver thread if run
         without the test flag.
         '''
         self.mainThread.start()
+        self.mockDriver.assert_called_once_with(testMode=False)
         self.mockThreading.Thread.assert_called_once_with(
-            target=palette.driver, daemon=True)
+            target=self.mockDriver().run, daemon=True
+        )
         self.mockThreading.Thread().start.assert_called_once()
 
-    def testMainShouldNotStartDriverThreadIfTestOptionGiven(self):
+    def testMainShouldStartDriverInTestModeThreadIfTestOptionGiven(self):
         '''
         Test that the main function does not start the driver thread if run
         with the test flag.
         '''
         self.mockSys.argv.append('-t')
         self.mainThread.start()
-        self.mockThreading.Thread.assert_not_called()
+        self.mockDriver.assert_called_once_with(testMode=True)
+        self.mockThreading.Thread.assert_called_once_with(
+            target=self.mockDriver().run, daemon=True
+        )
+        self.mockThreading.Thread().start.assert_called_once()
 
     def testMainShouldCallKeyPressedIfLineStartsWithPlus(self):
         '''
