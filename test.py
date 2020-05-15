@@ -359,22 +359,30 @@ class MetronomeTests(unittest.TestCase):
                          self.ticksPerBeat - self.tick)
 
     def testDecrementBPMShouldQueryJackTransport(self):
-        self.fail()
+        palette.Metronome().decrementBpm()
+        self.mockBackend().client.transport_query_struct.assert_called_once()
 
     def testDecrementBPMShouldDecreaseBPMBy1(self):
-        self.fail()
+        palette.Metronome().decrementBpm()
+        self.assertEqual(self.transportStruct.beats_per_minute, self.beatsPerMinute - 1)
+        self.mockBackend().client.transport_reposition_struct.assert_called_once_with(self.transportStruct)
 
     def testDecrementBPMShouldSaveBPMToMetronome(self):
-        self.fail()
+        palette.Metronome().decrementBpm()
+        self.assertEqual(palette.Metronome().bpm, self.beatsPerMinute - 1)
 
     def testIncrementBPMShouldQueryJackTransport(self):
-        self.fail()
+        palette.Metronome().incrementBpm()
+        self.mockBackend().client.transport_query_struct.assert_called_once()
 
     def testIncrementBPMShouldIncreaseBPMBy1(self):
-        self.fail()
+        palette.Metronome().incrementBpm()
+        self.assertEqual(self.transportStruct.beats_per_minute, self.beatsPerMinute + 1)
+        self.mockBackend().client.transport_reposition_struct.assert_called_once_with(self.transportStruct)
 
     def testIncrementBPMShouldSaveBPMToMetronome(self):
-        self.fail()
+        palette.Metronome().incrementBpm()
+        self.assertEqual(palette.Metronome().bpm, self.beatsPerMinute + 1)
 
 
 class LoopTests(unittest.TestCase):
