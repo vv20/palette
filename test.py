@@ -144,7 +144,6 @@ class MainTests(unittest.TestCase):
         for key in palette.LOOP_PAD:
             self.main.keyPressed(key)
             self.instruments[0].loop(key)
-            self.fail()
 
     def testKeyPressedShouldSelectInstrument(self):
         '''
