@@ -327,7 +327,7 @@ class Driver:
             self.keyboard.set_configuration()
             self.endpoint = self.keyboard[0][(0, 0)][0]
         self.outputDest = open(FIFO_NAME, mode='w')
-        self.pressedKeys = []
+        self.pressedKeys = set()
 
     def readStdin(self):
         '''
@@ -341,17 +341,17 @@ class Driver:
         '''
         return self.keyboard.read(
             self.endpoint.bEndpointAddress,
-            self.endpoint.wMaxPacketSize)
+            self.endpoint.wMaxPacketSize)[2:]
 
     def run(self):
         while not EXITING:
-            data = self.readInput()
-            [print('-' + key, file=self.outputDest, flush=True) for key
-                in self.pressedKeys if key not in data]
-            pressedKeys = [key for key in data[2:] if key != 0]
-            self.pressedKeys.extend(pressedKeys)
-            [print('+' + key, file=self.outputDest, flush=True) for key
-                in pressedKeys]
+            pressedKeys = set(filter(lambda x: x != 0, self.readInput()))
+            newKeys = pressedKeys.difference(self.pressedKeys)
+            releasedKeys = self.pressedKeys.difference(pressedKeys)
+            [self.outputDest.write('-{0}'.format(key)) for key in releasedKeys]
+            [self.outputDest.write('+{0}'.format(key)) for key in newKeys]
+            self.pressedKeys = pressedKeys
+        self.outputDest.close()
 
 
 class Metronome(Singleton):

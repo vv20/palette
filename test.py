@@ -1075,29 +1075,79 @@ class DriverTests(unittest.TestCase):
 
     def setUp(self):
         palette.EXITING = False
+        self.key1 = 1
+        self.key2 = 2
+        self.key3 = 3
+        self.data1 = [0, 0, self.key1, self.key2]
+        self.data2 = [0, 0, self.key2, self.key3]
         self.mockUsb = patchHandler(self, 'usb')
         self.mockOpen = patchHandler(self, 'open')
+        self.mockSys = patchHandler(self, 'sys')
+        self.mockKeyboard = mock.MagicMock()
+        self.mockInterface = mock.MagicMock()
+        self.mockEndpoint = mock.MagicMock()
+        self.mockUsb.find.return_value = self.mockKeyboard
+        self.mockKeyboard.__iter__.return_value = [[self.mockInterface]]
+        self.mockKeyboard.__getitem__().__getitem__.return_value = self.mockInterface
+        self.mockKeyboard.is_kernel_driver_active.return_value = True
+        self.mockInterface.__iter__.return_value = [self.mockEndpoint]
+        self.mockInterface.__getitem__.return_value = self.mockEndpoint
+        self.mockUsb.reset_mock()
 
     def tearDown(self):
         palette.EXITING = True
 
     def testInitShouldSearchUSBDeviceClass(self):
-        self.fail()
+        palette.Driver()
+        self.mockUsb.find.assert_called_once_with(bDeviceClass=0)
 
     def testInitShouldDetachKernelDrivers(self):
-        self.fail()
+        palette.Driver()
+        self.mockKeyboard.detach_kernel_driver.assert_called_once_with(
+                self.mockInterface.bInterfaceNumber
+        )
 
     def testInitShouldSetConfiguration(self):
-        self.fail()
+        palette.Driver()
+        self.mockKeyboard.set_configuration.assert_called_once()
 
     def testInitShouldOpenFIFOFileForWriting(self):
-        self.fail()
+        palette.Driver()
+        self.mockOpen.assert_called_once_with(palette.FIFO_NAME, mode='w')
 
     def testRunInTestModeShouldReadStdin(self):
-        self.fail()
+        self.mockSys.stdin.read.return_value = self.data1
+        driver = palette.Driver(testMode=True)
+        threading.Thread(target=driver.run, daemon=True).start()
+        self.mockSys.stdin.read.assert_any_call()
 
     def testRunInNormalModeShouldReadUSB(self):
-        self.fail()
+        self.mockKeyboard.read.return_value = self.data1
+        driver = palette.Driver()
+        threading.Thread(target=driver.run, daemon=True).start()
+        self.mockKeyboard.read.assert_any_call(
+            self.mockEndpoint.bEndpointAddress,
+            self.mockEndpoint.wMaxPacketSize
+        )
+
+    def testRunShouldPrintPressedKeysToFIFOFile(self):
+        self.mockKeyboard.read.return_value = self.data1
+        driver = palette.Driver()
+        threading.Thread(target=driver.run, daemon=True).start()
+        expectedKeys = list(filter(lambda x: x != 0, self.data1))
+        for key in expectedKeys:
+            self.mockOpen().write.assert_any_call('+{0}'.format(key))
+        self.assertEqual(self.mockOpen().write.call_count, len(expectedKeys))
+
+    def testRunShouldPrintReleasedKeysToFIFOFile(self):
+        self.mockKeyboard.read.side_effect = [self.data1] + [self.data2] * 1000
+        driver = palette.Driver()
+        threading.Thread(target=driver.run, daemon=True).start()
+        pressedKeys = list(filter(lambda x: x != 0, set(self.data1).union(set(self.data2))))
+        releasedKeys = set(self.data1).difference(set(self.data2))
+        for key in releasedKeys:
+            self.mockOpen().write.assert_any_call('-{0}'.format(key))
+        self.assertEqual(self.mockOpen().write.call_count, len(releasedKeys) + len(pressedKeys))
 
 
 class ProcessCallbackTests(unittest.TestCase):
