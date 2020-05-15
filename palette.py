@@ -477,7 +477,7 @@ class Loop:
             return toReturn
         return []
 
-    def startRecording(self, offset):
+    def startRecording(self):
         '''
         Start recording the events from the process throughput.
         '''
@@ -485,14 +485,14 @@ class Loop:
         self.recording = True
         self.playing = False
 
-    def stopRecording(self, offset):
+    def stopRecording(self):
         '''
         Stop recording the events from the process throughput.
         '''
         self.recording = False
         self.playing = True
 
-    def startPlaying(self, offset):
+    def startPlaying(self):
         '''
         Start injecting the recorded events into the process throughput.
         '''
@@ -500,7 +500,7 @@ class Loop:
         self.recording = False
         self.position = 0
 
-    def stopPlaying(self, offset):
+    def stopPlaying(self):
         '''
         Stop adding the recorded events to the process throughput.
         '''
